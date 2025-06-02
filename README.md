@@ -1,287 +1,177 @@
-# Jules Dev Kit
+# Forge Ops - Issue Tracking System
 
-> AI-powered software engineering toolkit for intelligent code development, issue tracking, and GitHub repository management.
+Forge Ops is a command-line application designed to help developers manage software development issues and track associated repositories. It provides a simple interface for creating, viewing, and listing issues, as well as managing a list of repositories.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![GitHub Issues](https://img.shields.io/github/issues/your-org/jules-dev-kit)](https://github.com/your-org/jules-dev-kit/issues)
+## Features
 
-## Overview
+*   **Issue Management:**
+    *   Create new issues with a title, description, and associated repository.
+    *   List all existing issues.
+    *   Filter issues by repository.
+    *   View detailed information for a specific issue.
+*   **Repository Management:**
+    *   Maintain a list of known repositories.
+    *   Add new repositories to the system.
+*   **Command-Line Interface:** Easy-to-use CLI for all functionalities.
 
-Jules Dev Kit is an advanced AI agent designed for software engineering teams who want to streamline their development workflow. It combines intelligent issue tracking, automated code generation, and seamless GitHub integration to help developers focus on building great software.
+## Setup and Installation
 
-### Key Features
+Follow these steps to set up the Forge Ops Issue Tracker on your local machine:
 
-- **🤖 AI-Powered Issue Management**: Automatically detect, classify, and prioritize development issues
-- **🔗 GitHub Integration**: Deep integration with GitHub repositories, pull requests, and workflows
-- **⚡ Intelligent Code Generation**: Generate code solutions directly from issue descriptions
-- **📊 Development Analytics**: Track team productivity and code quality metrics
-- **🔄 Automated Workflows**: Streamline repetitive development tasks
-- **🛡️ Security & Quality**: Built-in vulnerability scanning and code quality analysis
+1.  **Clone the Repository:**
+    Open your terminal and clone the repository using Git:
+    ```bash
+    git clone <repository-url> # Replace <repository-url> with the actual URL
+    cd forge-ops-issue-tracker # Or the actual directory name after cloning
+    ```
 
-## Quick Start
+2.  **Create a Virtual Environment:**
+    It's highly recommended to use a virtual environment to manage project dependencies. Create and activate one using Python's built-in `venv` module:
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate  # On Windows, use: .venv\Scripts\activate
+    ```
 
-### Prerequisites
+3.  **Install Dependencies with UV:**
+    This project uses `uv` for package management. Install the dependencies using:
+    ```bash
+    uv pip sync
+    ```
+    *This command will install dependencies based on `uv.lock` if present, or `pyproject.toml`.*
 
-- Python 3.8 or higher
-- Git installed and configured
-- GitHub account with API access
-- Node.js 16+ (for web interface)
+## Usage
 
-### Installation
+To use the Forge Ops Issue Tracker, you can run the `main.py` script using `uv` (if you followed the setup instructions) or directly with Python.
 
+### General Syntax
+
+You can run commands using `uv` or Python directly:
+
+**Using UV:**
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/jules-dev-kit.git
-cd jules-dev-kit
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Install Node.js dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your GitHub token and configuration
+uv run python main.py <command> [options]
 ```
 
-### Configuration
-
-1. **GitHub Setup**
-   ```bash
-   # Generate a GitHub Personal Access Token with repo permissions
-   # Add to .env file:
-   GITHUB_TOKEN=your_token_here
-   GITHUB_USERNAME=your_username
-   ```
-
-2. **Database Setup**
-   ```bash
-   # Initialize the database
-   python manage.py migrate
-   
-   # Create a superuser (optional)
-   python manage.py createsuperuser
-   ```
-
-3. **Start the Services**
-   ```bash
-   # Start the backend API
-   python manage.py runserver
-   
-   # Start the web interface (in another terminal)
-   npm run dev
-   ```
-
-## Core Components
-
-### Issue Management System
-
-Track and manage development issues with AI-powered insights:
-
-```python
-from jules_dev_kit import IssueManager
-
-# Initialize issue manager
-issues = IssueManager(repo="your-org/your-repo")
-
-# Create an issue with AI classification
-issue = issues.create_issue(
-    title="Optimize database queries in user service",
-    description="Users experiencing slow response times...",
-    auto_classify=True
-)
-
-# Get AI-generated solution suggestions
-suggestions = issue.get_ai_suggestions()
-```
-
-### Repository Management
-
-Manage multiple repositories and track changes:
-
-```python
-from jules_dev_kit import RepoManager
-
-# Add repository to tracking
-repo = RepoManager.add_repo(
-    url="https://github.com/your-org/your-repo",
-    branch="main"
-)
-
-# Analyze code quality
-analysis = repo.analyze_code_quality()
-print(f"Code quality score: {analysis.quality_score}")
-```
-
-### AI Code Generation
-
-Generate code solutions from issue descriptions:
-
-```python
-from jules_dev_kit import CodeGenerator
-
-# Generate code from issue
-generator = CodeGenerator()
-code_solution = generator.generate_from_issue(
-    issue_id=123,
-    language="python",
-    framework="django"
-)
-
-# Create pull request with generated code
-pr = generator.create_pull_request(
-    code_solution,
-    title="Fix: Optimize database queries",
-    description="AI-generated solution for issue #123"
-)
-```
-
-## API Reference
-
-### REST API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/issues/` | GET, POST | List and create issues |
-| `/api/issues/{id}/` | GET, PUT, DELETE | Issue details and updates |
-| `/api/repos/` | GET, POST | Repository management |
-| `/api/code/generate/` | POST | Generate code from prompts |
-| `/api/analytics/` | GET | Development metrics |
-
-### Webhook Integration
-
-Configure GitHub webhooks to automatically sync events:
-
-```json
-{
-  "url": "https://your-domain.com/api/webhooks/github/",
-  "content_type": "json",
-  "events": [
-    "issues",
-    "pull_request",
-    "push",
-    "repository"
-  ]
-}
-```
-
-## Configuration Options
-
-### Environment Variables
-
+**Using Python directly:**
 ```bash
-# GitHub Integration
-GITHUB_TOKEN=your_github_token
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
-
-# Database
-DATABASE_URL=postgresql://user:password@localhost/jules_dev_kit
-
-# AI Configuration
-OPENAI_API_KEY=your_openai_key
-AI_MODEL=gpt-4
-
-# Web Interface
-FRONTEND_URL=http://localhost:3000
-BACKEND_URL=http://localhost:8000
+python main.py <command> [options]
 ```
+*(Ensure your virtual environment is activated if running Python directly).*
 
-### Custom Workflows
+### Available Commands
 
-Create custom automation workflows in `workflows/`:
+**Issue Management:**
 
-```yaml
-# workflows/auto-assign.yml
-name: Auto Assign Issues
-trigger:
-  event: issue_created
-conditions:
-  - label_contains: "bug"
-  - priority: "high"
-actions:
-  - assign_to_team: "backend"
-  - notify_slack: "#dev-alerts"
-```
+*   **Create a new issue:**
+    ```bash
+    # Using UV
+    uv run python main.py create-issue
+    # Or using Python directly
+    python main.py create-issue
+    ```
+    *This command will guide you through an interactive process to create a new issue.*
 
-## Development
+*   **List all issues:**
+    ```bash
+    # Using UV
+    uv run python main.py list-issues
+    # Or using Python directly
+    python main.py list-issues
+    ```
 
-### Project Structure
+*   **List issues for a specific repository:**
+    ```bash
+    # Using UV
+    uv run python main.py list-issues --repo <repository-name>
+    # Or using Python directly
+    python main.py list-issues --repo <repository-name>
+    ```
+    *Example:*
+    ```bash
+    # Using UV
+    uv run python main.py list-issues --repo forge-ops
+    # Or using Python directly
+    python main.py list-issues --repo forge-ops
+    ```
 
-```
-jules-dev-kit/
-├── backend/                 # Django API backend
-│   ├── apps/               # Django applications
-│   ├── config/             # Configuration files
-│   └── requirements.txt    # Python dependencies
-├── frontend/               # React web interface
-│   ├── src/               # Source code
-│   ├── public/            # Static assets
-│   └── package.json       # Node dependencies
-├── ai/                    # AI/ML components
-│   ├── models/            # AI model definitions
-│   └── processors/        # Data processing
-├── workflows/             # Automation workflows
-├── docs/                  # Documentation
-└── tests/                 # Test suites
-```
+*   **View detailed issue information:**
+    ```bash
+    # Using UV
+    uv run python main.py view-issue <ISSUE-ID>
+    # Or using Python directly
+    python main.py view-issue <ISSUE-ID>
+    ```
+    *Example:*
+    ```bash
+    # Using UV
+    uv run python main.py view-issue ISSUE-001
+    # Or using Python directly
+    python main.py view-issue ISSUE-001
+    ```
 
-### Running Tests
+**Repository Management:**
 
-```bash
-# Backend tests
-python manage.py test
+*   **List all registered repositories:**
+    ```bash
+    # Using UV
+    uv run python main.py list-repos
+    # Or using Python directly
+    python main.py list-repos
+    ```
 
-# Frontend tests
-npm test
+*   **Add a new repository to the registry:**
+    ```bash
+    # Using UV
+    uv run python main.py add-repo <repository-name>
+    # Or using Python directly
+    python main.py add-repo <repository-name>
+    ```
+    *Example:*
+    ```bash
+    # Using UV
+    uv run python main.py add-repo my-new-project
+    # Or using Python directly
+    python main.py add-repo my-new-project
+    ```
 
-# Integration tests
-pytest tests/integration/
+**Help:**
 
-# AI model tests
-python -m pytest ai/tests/
-```
+*   **Show help information:**
+    ```bash
+    # Using UV
+    uv run python main.py help
+    # Or using Python directly
+    python main.py help
+    ```
+    *(Also available via `python main.py --help` or `python main.py -h`)*
 
-### Contributing
+## Project Structure
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+The project is organized as follows:
 
-## Security
+*   `main.py`: The main entry point for the command-line interface. It parses arguments and calls the appropriate command handlers.
+*   `commands/`: Contains modules for each CLI command (e.g., `create_issue.py`, `list_issues.py`).
+*   `core/`: Houses the core logic of the application:
+    *   `issue_tracker.py`: Manages issue creation, validation, and interaction logic.
+    *   `repository_manager.py`: Handles operations related to repositories, including loading and saving from `repos.json`.
+    *   `file_manager.py`: Manages the storage and retrieval of issue data from individual files.
+*   `utils/`: Includes utility modules, such as input validators (`validators.py`).
+*   `issues/`: This directory stores the individual issue files, typically in JSON format. Each file represents a single issue.
+*   `repos.json`: A JSON file that acts as a registry for known repository names.
+*   `.gitignore`: Specifies intentionally untracked files that Git should ignore.
+*   `pyproject.toml`: Project metadata and build system configuration (PEP 518).
+*   `uv.lock`: Lock file for the `uv` Python package installer and resolver.
+*   `README.md`: This file, providing an overview and guide to the project.
 
-- All API endpoints require authentication
-- GitHub tokens are encrypted at rest
-- Webhook payloads are verified with HMAC signatures
-- Regular security audits of dependencies
+## Contributing
 
-## Roadmap
+Contributions are welcome! If you have suggestions for improvements, new features, or bug fixes, please feel free to:
 
-- [ ] **Q2 2025**: Advanced AI code review capabilities
-- [ ] **Q3 2025**: Integration with additional Git platforms (GitLab, Bitbucket)
-- [ ] **Q4 2025**: Mobile application for issue management
-- [ ] **2026**: Multi-language support and localization
-
-## Support
-
-- **Documentation**: [https://jules-dev-kit.readthedocs.io](https://jules-dev-kit.readthedocs.io)
-- **Issues**: [GitHub Issues](https://github.com/your-org/jules-dev-kit/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/jules-dev-kit/discussions)
-- **Email**: support@jules-dev-kit.com
+1.  Open an issue to discuss the change.
+2.  Fork the repository and create a new branch for your work.
+3.  Make your changes and commit them with clear messages.
+4.  Submit a pull request for review.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- OpenAI for providing AI capabilities
-- GitHub for excellent API and platform
-- The open source community for inspiration and contributions
-
----
-
-**Made with ❤️ by the Jules Dev Kit team**
+The license for this project is yet to be determined.
