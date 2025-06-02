@@ -1,0 +1,7 @@
+{
+  "id": "ISSUE-004",
+  "title": "git_github_starter.py automatically commits changes during status check - unexpected behavior",
+  "description": "The git_github_starter.py script automatically commits and pushes changes whenever it detects uncommitted files, without explicit user consent. The `check_git_status_and_commit()` function name suggests it only checks status, but it actually stages all changes, commits with a predetermined message, and attempts to push to remote. This behavior could lead to accidental commits of sensitive data, disruption of development workflow, and loss of control over version history. The script should ask for user confirmation before making any commits rather than automatically committing detected changes.",
+  "repository": "git-autobot",
+  "created_at": "2025-06-01T23:11:15.923004Z"
+}

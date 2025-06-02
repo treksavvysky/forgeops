@@ -1,0 +1,7 @@
+{
+  "id": "ISSUE-005",
+  "title": "Add GitHub repository creation for new local repos that don't have remotes",
+  "description": "When initializing a new repository with --init-repo, the script attempts to auto-detect the GitHub repository name from local Git remotes. For brand new repos without remotes, it prompts for a GitHub repo name, but then fails validation because the repository doesn't exist on GitHub yet.",
+  "repository": "git-autobot",
+  "created_at": "2025-06-02T03:21:47.969249Z"
+}
