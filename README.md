@@ -12,6 +12,11 @@ Forge Ops is a command-line application designed to help developers manage softw
 *   **Repository Management:**
     *   Maintain a list of known repositories.
     *   Add new repositories to the system.
+*   **Task Management:**
+    *   Create and manage task lists associated with issues, projects, or personal use.
+    *   Tasks include details like subject, description, status, priority, and comments.
+    *   Task lists are stored in JSON files under the `task_lists/` directory.
+        *   Task lists are stored as JSON files in the `task_lists/` directory. Each JSON file includes metadata like version, name, association (issue, project, personal), creator, creation date, and a list of tasks. Each task has a unique ID, subject, description, status, creation date, priority, and a list of comments with timestamps.
 *   **Command-Line Interface:** Easy-to-use CLI for all functionalities.
 
 ## Setup and Installation
@@ -155,8 +160,10 @@ The project is organized as follows:
     *   `issue_tracker.py`: Manages issue creation, validation, and interaction logic.
     *   `repository_manager.py`: Handles operations related to repositories, including loading and saving from `repos.json`.
     *   `file_manager.py`: Manages the storage and retrieval of issue data from individual files.
+    *   `task_manager.py`: Manages task lists, including creation, loading, and modification of tasks.
 *   `utils/`: Includes utility modules, such as input validators (`validators.py`).
 *   `issues/`: This directory stores the individual issue files, typically in JSON format. Each file represents a single issue.
+*   `task_lists/`: This directory will store task list files in JSON format. Each file represents a distinct task list.
 *   `repos.json`: A JSON file that acts as a registry for known repository names.
 *   `.gitignore`: Specifies intentionally untracked files that Git should ignore.
 *   `pyproject.toml`: Project metadata and build system configuration (PEP 518).
