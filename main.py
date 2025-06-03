@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Jules Dev Kit - Issue Tracking System
+ForgeOps - Issue Tracking System
 CLI entry point for issue management commands.
 """
 
@@ -20,7 +20,7 @@ from commands.add_repo import add_repo
 
 def show_help():
     """Display help information."""
-    print("Jules Dev Kit - Issue Tracker")
+    print("ForgeOps - Issue Tracker")
     print("\nIssue Management:")
     print("  python main.py create-issue              Create a new issue")
     print("  python main.py list-issues               List all issues")
