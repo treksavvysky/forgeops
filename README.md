@@ -18,6 +18,8 @@ Forge Ops is a command-line application designed to help developers manage softw
     *   Task lists are stored in JSON files under the `task_lists/` directory.
         *   Task lists are stored as JSON files in the `task_lists/` directory. Each JSON file includes metadata like version, name, association (issue, project, personal), creator, creation date, and a list of tasks. Each task has a unique ID, subject, description, status, creation date, priority, and a list of comments with timestamps.
 *   **Command-Line Interface:** Easy-to-use CLI for all functionalities.
+*   **SQLite Storage:** Issues and repositories are replicated into a local SQLite database for easy querying.
+*   **FastAPI Service:** A minimal API exposes the issues at `/issues`.
 
 ## Setup and Installation
 
@@ -42,7 +44,7 @@ Follow these steps to set up the Forge Ops Issue Tracker on your local machine:
     ```bash
     uv pip sync
     ```
-    *This command will install dependencies based on `uv.lock` if present, or `pyproject.toml`.*
+    *This command installs dependencies (including FastAPI and uvicorn) based on `uv.lock` or `pyproject.toml`.*
 
 ## Usage
 
@@ -139,6 +141,14 @@ python main.py <command> [options]
     python main.py add-repo my-new-project
     ```
 
+*   **Migrate existing issues into the database:**
+    ```bash
+    uv run python main.py migrate-issues
+    ```
+
+This command reads all JSON files in the `issues/` folder and inserts them into `forgeops.db`.
+
+
 **Help:**
 
 *   **Show help information:**
@@ -149,6 +159,16 @@ python main.py <command> [options]
     python main.py help
     ```
     *(Also available via `python main.py --help` or `python main.py -h`)*
+
+### Running the API
+
+Start the FastAPI service with uvicorn:
+
+```bash
+uvicorn api:app --reload
+```
+
+Once running, navigate to `http://localhost:8000/issues` to see all issues in the database.
 
 ## Project Structure
 
