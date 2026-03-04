@@ -16,6 +16,7 @@ from commands.list_issues import list_issues
 from commands.view_issue import view_issue
 from commands.list_repos import list_repos
 from commands.add_repo import add_repo
+from commands.migrate_issues import migrate_issues
 
 
 def show_help():
@@ -29,6 +30,8 @@ def show_help():
     print("\nRepository Management:")
     print("  python main.py list-repos                List all registered repositories")
     print("  python main.py add-repo <repo-name>      Add a new repository to registry")
+    print("\nDatabase:")
+    print("  python main.py migrate-issues            Import issue files into SQLite")
     print("\nExamples:")
     print("  python main.py create-issue")
     print("  python main.py list-issues")
@@ -82,16 +85,19 @@ def main():
                 print("Usage: python main.py add-repo <repo-name>")
                 print("Example: python main.py add-repo my-new-project")
                 sys.exit(1)
-            
+
             repo_name = sys.argv[2]
             add_repo(repo_name)
-        
+
+        elif command == "migrate-issues":
+            migrate_issues()
+
         elif command in ["help", "--help", "-h"]:
             show_help()
         
         else:
             print(f"Unknown command: {command}")
-            print("Available commands: create-issue, list-issues, view-issue, list-repos, add-repo")
+            print("Available commands: create-issue, list-issues, view-issue, list-repos, add-repo, migrate-issues")
             print("Use 'python main.py help' for more information.")
             sys.exit(1)
     

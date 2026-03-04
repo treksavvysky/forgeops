@@ -6,10 +6,13 @@ import json
 import re
 from pathlib import Path
 
+from core.db import Database
+
 
 class RepositoryManager:
-    def __init__(self, repos_file="repos.json"):
+    def __init__(self, repos_file: str = "repos.json", db_path: str = "forgeops.db"):
         self.repos_file = Path(repos_file)
+        self.db = Database(db_path)
         self._init_repos_registry()
     
     def _init_repos_registry(self):
@@ -17,20 +20,26 @@ class RepositoryManager:
         if not self.repos_file.exists():
             default_repos = [
                 "jules-dev-kit",
-                "my-app", 
+                "my-app",
                 "backend-api",
                 "frontend-web",
                 "mobile-app"
             ]
             with open(self.repos_file, 'w') as f:
                 json.dump({"repositories": default_repos}, f, indent=2)
+
+            for repo in default_repos:
+                self.db.add_repository(repo)
     
     def load_repositories(self):
         """Load the list of known repositories."""
         try:
             with open(self.repos_file, 'r') as f:
                 data = json.load(f)
-                return data.get("repositories", [])
+                repos = data.get("repositories", [])
+                for repo in repos:
+                    self.db.add_repository(repo)
+                return repos
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Error loading repositories: {e}")
             return []
@@ -74,8 +83,9 @@ class RepositoryManager:
         if repo_name not in repos:
             repos.append(repo_name)
             repos.sort()  # Keep them sorted
-            
+
             with open(self.repos_file, 'w') as f:
                 json.dump({"repositories": repos}, f, indent=2)
+            self.db.add_repository(repo_name)
             return True
         return False
