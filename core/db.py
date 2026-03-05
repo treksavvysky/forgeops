@@ -12,6 +12,12 @@ class Database:
         self.conn.row_factory = sqlite3.Row
         self._ensure_schema()
 
+    def __enter__(self) -> "Database":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
     def _ensure_schema(self) -> None:
         cur = self.conn.cursor()
         cur.execute(

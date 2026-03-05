@@ -5,14 +5,16 @@ Issue Tracker - Main class for managing issues
 import sys
 from datetime import datetime
 
+from core.db import Database
 from core.repository_manager import RepositoryManager
 from core.file_manager import FileManager
 from utils.validators import InputValidator
 
 
 class IssueTracker:
-    def __init__(self):
-        self.repo_manager = RepositoryManager()
+    def __init__(self, db: Database = None):
+        self.db = db or Database()
+        self.repo_manager = RepositoryManager(db=self.db)
         self.file_manager = FileManager()
         self.validator = InputValidator()
     
@@ -49,10 +51,10 @@ class IssueTracker:
                     print("Invalid selection.")
                     return None
                     
-            except (ValueError, KeyboardInterrupt):
-                if KeyboardInterrupt:
-                    print("\n\nOperation cancelled by user.")
-                    sys.exit(0)
+            except KeyboardInterrupt:
+                print("\n\nOperation cancelled by user.")
+                sys.exit(0)
+            except ValueError:
                 print("Invalid selection.")
                 return None
         else:

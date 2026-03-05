@@ -10,9 +10,9 @@ from core.db import Database
 
 
 class RepositoryManager:
-    def __init__(self, repos_file: str = "repos.json", db_path: str = "forgeops.db"):
+    def __init__(self, repos_file: str = "repos.json", db: Database = None):
         self.repos_file = Path(repos_file)
-        self.db = Database(db_path)
+        self.db = db or Database()
         self._init_repos_registry()
     
     def _init_repos_registry(self):
@@ -32,14 +32,11 @@ class RepositoryManager:
                 self.db.add_repository(repo)
     
     def load_repositories(self):
-        """Load the list of known repositories."""
+        """Load the list of known repositories from the JSON registry."""
         try:
             with open(self.repos_file, 'r') as f:
                 data = json.load(f)
-                repos = data.get("repositories", [])
-                for repo in repos:
-                    self.db.add_repository(repo)
-                return repos
+                return data.get("repositories", [])
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(f"Error loading repositories: {e}")
             return []

@@ -6,7 +6,6 @@ import sys
 from datetime import datetime
 
 from core.issue_tracker import IssueTracker
-from core.db import Database
 
 
 def create_issue():
@@ -54,8 +53,8 @@ def create_issue():
         confirm = input("\nCreate this issue? (Y/n): ").strip().lower()
         if confirm in ['', 'y', 'yes']:
             issue_file = tracker.file_manager.save_issue(issue_data)
-            Database().add_issue(issue_data)
-            tracker.repo_manager.db.add_repository(repo_name)
+            tracker.db.add_issue(issue_data)
+            tracker.db.add_repository(repo_name)
             print(f"\n✅ Issue {issue_id} created successfully!")
             print(f"📁 Saved to: {issue_file}")
         else:
