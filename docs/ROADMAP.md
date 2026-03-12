@@ -1,58 +1,102 @@
-# Forge Ops Roadmap
+# ForgeOps Roadmap
 
-This document outlines the planned improvements and future direction for the Forge Ops Issue Tracking System. The goals are divided into three phases: core stability, feature expansion, and ecosystem growth.
+ForgeOps is a **cross-repo work ledger**. It tracks six core capabilities:
 
----
+| Capability | Current state |
+|---|---|
+| Repositories | Name registry only — no metadata |
+| Issues / Tasks | Two disconnected systems — not linked, tasks not in CLI or API |
+| Assignments | Not implemented |
+| Progress states | Tasks have free-text `status`; issues have no status |
+| Artifacts / References | Not implemented |
+| Review outcomes | Not implemented |
 
-## Phase 1: Core Stability & Modernization
-*Focus: Refactoring the foundation for better reliability and developer experience.*
-
-### 🏗️ Architectural Enhancements
-- [ ] **Automatic DB Synchronization:** Implement a "write-through" cache so that any CLI issue creation/modification automatically updates `forgeops.db`.
-- [ ] **Pydantic Data Models:** Replace manual dictionary parsing with Pydantic models to ensure strict schema validation for JSON files and API responses.
-- [ ] **SQLModel Integration:** Transition from raw SQLite queries to SQLModel (Pydantic + SQLAlchemy) for cleaner, type-safe database interactions.
-- [ ] **Centralized Configuration:** Move hardcoded paths (e.g., `forgeops.db`, `issues/`) to a `config.py` file supported by environment variables.
-
-### 💻 CLI & UX Improvements
-- [ ] **Rich CLI Output:** Integrate the `rich` library to provide color-coded status indicators, formatted tables for `list-issues`, and Markdown rendering for descriptions.
-- [x] **Modern CLI Framework:** Migrated to Typer with auto-generated `--help` and argument validation. *(done 2026-03-12, `218b783`)*
-- [ ] **Repository Autocompletion:** Add shell completion support for repository names when using CLI commands. *(basic shell completion available via Typer's `--install-completion`; repo-specific value completion still needed)*
+The roadmap is structured to build these capabilities incrementally across three phases.
 
 ---
 
-## Phase 2: Functional Expansion
-*Focus: Turning the tool into a complete issue management lifecycle manager.*
+## Phase 1: Unified Foundation
 
-### 🛠️ Issue Lifecycle Management
-- [ ] **Update & Delete Commands:** Implement `update-issue` and `delete-issue` CLI commands.
-- [ ] **Status Tracking:** Add support for issue states: `Open`, `In Progress`, `Blocked`, `Resolved`, and `Closed`.
-- [ ] **Priority Levels:** Allow users to assign priorities (`Low`, `Medium`, `High`, `Urgent`) to issues.
-- [ ] **Full-Text Search:** Implement a `search-issues` command to query titles and descriptions across the database.
+*Focus: Merge issues and tasks into a single data model backed by SQLite, with proper schema and validation.*
 
-### 📝 Task Integration
-- [ ] **Interactive Task CLI:** Fully integrate `task_manager.py` into the CLI with commands like `add-task`, `list-tasks`, and `complete-task` linked to specific issues.
-- [ ] **Sub-task Progress:** Automatically calculate and display issue completion percentages based on associated task statuses.
+### Data Model
+
+- [ ] **Unified work-item schema:** Collapse issues and tasks into one `work_items` table with: id, title, description, repository (FK), status, priority, assigned_to, parent_id (for sub-tasks), created_by, created_at, updated_at.
+- [ ] **Pydantic models:** Define `WorkItem`, `Repository`, and related models for strict validation across CLI, API, and DB layers.
+- [ ] **SQLModel integration:** Replace raw sqlite3 queries and JSON file storage with SQLModel for type-safe DB interactions. Retire the dual-storage (JSON files + SQLite) model.
+- [ ] **Centralized configuration:** Move hardcoded paths (`forgeops.db`, `issues/`) to a `config.py` supported by environment variables.
+- [ ] **Migration path:** Provide a one-time migration from the current JSON files + old schema into the new unified schema.
+
+### Repositories
+
+- [ ] **Repository metadata:** Extend the `repositories` table with url, description, and owner fields.
+- [ ] **Repository CRUD:** Add `update-repo` and `remove-repo` CLI commands.
+
+### CLI & UX
+
+- [x] **Modern CLI framework:** Migrated to Typer. *(done 2026-03-12, `218b783`)*
+- [ ] **Rich CLI output:** Use `rich` (already installed as Typer dependency) for color-coded status indicators and formatted tables.
+- [ ] **Repository autocompletion:** Typer callback that completes `--repo` values from the registry. *(basic shell completion available via `--install-completion`)*
+
+---
+
+## Phase 2: Work Ledger Capabilities
+
+*Focus: Implement assignments, progress states, artifacts, and reviews — the four missing ledger pillars.*
+
+### Assignments
+
+- [ ] **Assigned-to field:** Add `assigned_to` to work items. CLI: `assign-issue <ID> <person>`, `my-issues`.
+- [ ] **Ownership history:** Record assignment changes with timestamps (who, when, from/to).
+
+### Progress States
+
+- [ ] **State machine:** Define allowed states (`Open`, `In Progress`, `Blocked`, `Resolved`, `Closed`) and valid transitions.
+- [ ] **Status commands:** `update-issue <ID> --status <state>` with transition validation.
+- [ ] **Filter by state:** `list-issues --status open`, `list-issues --status blocked`.
+- [ ] **Priority levels:** `Low`, `Medium`, `High`, `Urgent` — filterable and sortable.
+
+### Artifacts & References
+
+- [ ] **Attachments table:** Link work items to external references — URLs, file paths, commit SHAs, PR numbers.
+- [ ] **CLI commands:** `attach <ISSUE-ID> <url-or-path>`, `list-attachments <ISSUE-ID>`.
+- [ ] **Git integration:** Auto-detect current repository and branch when creating issues.
+
+### Review Outcomes
+
+- [ ] **Review model:** Reviewer assignment, decision (approve / request-changes / reject), comments, timestamp.
+- [ ] **CLI commands:** `request-review <ISSUE-ID> <reviewer>`, `submit-review <ISSUE-ID> --decision approve`.
+- [ ] **Decision log:** Append-only history of review decisions per work item.
+
+### Task Hierarchy
+
+- [ ] **Sub-tasks:** Work items can have a `parent_id` linking to another work item.
+- [ ] **Progress rollup:** Auto-calculate parent completion percentage from child statuses.
+- [ ] **CLI:** `add-task <PARENT-ID> <title>`, `list-tasks <ISSUE-ID>`.
 
 ---
 
 ## Phase 3: API & Ecosystem
-*Focus: Extending Forge Ops beyond a local CLI tool.*
 
-### 🌐 Web API Maturity
-- [ ] **Full CRUD API:** Expand the FastAPI service with POST, PATCH, and DELETE endpoints.
-- [ ] **API Authentication:** Implement basic API key or OAuth2 authentication for the web service.
-- [ ] **Swagger Documentation:** Auto-generate and polish interactive API docs at `/docs`.
+*Focus: Expose the full ledger over HTTP and add operational tooling.*
 
-### 🧪 Quality & DevOps
-- [ ] **Expanded Test Suite:**
-    - [x] Add integration tests for all CLI commands. *(done 2026-03-12, `0ced06b`)*
-    - [ ] Implement property-based testing for data validation.
+### Web API
+
+- [ ] **Full CRUD API:** POST, GET, PATCH, DELETE for work items, repositories, attachments, and reviews.
+- [ ] **API authentication:** Bearer token or API key auth.
+- [ ] **Filtering & search:** Query params for status, priority, assignee, repository. Full-text search on title/description.
+
+### Quality & DevOps
+
+- [ ] **Expanded test suite:**
+    - [x] Integration tests for CLI commands. *(done 2026-03-12, `0ced06b`)*
+    - [ ] Tests for new ledger capabilities (assignments, states, artifacts, reviews).
+    - [ ] Property-based testing for data validation.
 - [ ] **GitHub Actions CI:** Automate linting (`ruff`), type-checking (`mypy`), and testing on every push.
-- [ ] **Dockerization:** Provide a `Dockerfile` to easily run the API and CLI in a containerized environment.
+- [ ] **Dockerization:** Dockerfile for the API and CLI.
 
----
+### Future Ideas
 
-## Future Ideas
-- [ ] **Git Integration:** Automatically detect the current repository and branch when creating issues.
-- [ ] **Markdown Exports:** Export issue summaries or project status reports to Markdown/PDF.
-- [ ] **Multi-user Support:** Explore multi-user database schemas for collaborative teams.
+- [ ] **Markdown / PDF exports:** Issue summaries and project status reports.
+- [ ] **Multi-user support:** User accounts, permissions, team-scoped views.
+- [ ] **Webhook notifications:** Fire events on state transitions for external integrations.
