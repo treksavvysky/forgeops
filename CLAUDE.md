@@ -19,7 +19,7 @@ Available commands: `create-issue`, `list-issues`, `list-issues --repo <name>`, 
 ```bash
 uv run uvicorn api:app --reload
 ```
-Serves at `http://localhost:8000`. Endpoints: `GET /issues`, docs at `/docs`.
+Serves at `http://localhost:8000`. Endpoints: `GET /issues`, docs at `/docs`. No authentication — the API is open.
 
 ### Running Tests
 ```bash
@@ -65,6 +65,7 @@ uv sync
 ## Notes
 
 - The project name in `pyproject.toml` is still `jules-dev-kit` (the original name before rename to ForgeOps).
-- No CI/CD is configured yet. The roadmap (`docs/ROADMAP.md`) plans ruff for linting, mypy for type checking, and GitHub Actions.
-- Test coverage is limited to `TaskManager` only (`tests/test_task_manager.py`). No tests exist for commands or core issue/repo logic.
-- The `datetime-truncate` package is used in tests but not declared in `pyproject.toml`.
+- No CI/CD, linter, or formatter configured. The roadmap (`docs/ROADMAP.md`) plans ruff, mypy, and GitHub Actions.
+- Test coverage is limited to `TaskManager` only (`tests/test_task_manager.py`). Tests use `unittest.TestCase` style (not pytest fixtures). No tests exist for commands or core issue/repo logic.
+- `pytest` and `datetime-truncate` are test dependencies but neither is declared in `pyproject.toml` — they must be available in the `uv` environment.
+- `create-issue` is interactive (prompts for input via `input()`) — it cannot be used non-interactively without modification.

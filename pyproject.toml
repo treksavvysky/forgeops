@@ -8,3 +8,9 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]"
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "datetime-truncate",
+]
