@@ -36,7 +36,7 @@ uv sync
 
 ## Architecture
 
-**CLI routing**: `main.py` parses `sys.argv` and dispatches to handler functions in `commands/`. There is no CLI framework — commands are matched via if/elif chains.
+**CLI routing**: `main.py` uses [Typer](https://typer.tiangolo.com/) to define subcommands that dispatch to handler functions in `commands/`. Run `uv run python main.py --help` for auto-generated help. Shell completion is available via `--install-completion`.
 
 **Three-layer structure**:
 - `commands/` — CLI command handlers (user interaction, argument handling)
