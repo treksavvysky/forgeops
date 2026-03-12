@@ -15,8 +15,8 @@ This document outlines the planned improvements and future direction for the For
 
 ### 💻 CLI & UX Improvements
 - [ ] **Rich CLI Output:** Integrate the `rich` library to provide color-coded status indicators, formatted tables for `list-issues`, and Markdown rendering for descriptions.
-- [ ] **Modern CLI Framework:** Migrate from `sys.argv` to `Typer` or `Click` for automatic help generation and argument type validation.
-- [ ] **Repository Autocompletion:** Add shell completion support for repository names when using CLI commands.
+- [x] **Modern CLI Framework:** Migrated to Typer with auto-generated `--help` and argument validation. *(done 2026-03-12, `218b783`)*
+- [ ] **Repository Autocompletion:** Add shell completion support for repository names when using CLI commands. *(basic shell completion available via Typer's `--install-completion`; repo-specific value completion still needed)*
 
 ---
 
@@ -44,8 +44,8 @@ This document outlines the planned improvements and future direction for the For
 - [ ] **Swagger Documentation:** Auto-generate and polish interactive API docs at `/docs`.
 
 ### 🧪 Quality & DevOps
-- [ ] **Expanded Test Suite:** 
-    - [ ] Add integration tests for all CLI commands.
+- [ ] **Expanded Test Suite:**
+    - [x] Add integration tests for all CLI commands. *(done 2026-03-12, `0ced06b`)*
     - [ ] Implement property-based testing for data validation.
 - [ ] **GitHub Actions CI:** Automate linting (`ruff`), type-checking (`mypy`), and testing on every push.
 - [ ] **Dockerization:** Provide a `Dockerfile` to easily run the API and CLI in a containerized environment.
