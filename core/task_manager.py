@@ -37,12 +37,9 @@ class TaskManager:
             with open(self.file_path, 'r') as f:
                 self.task_data = json.load(f)
         except IOError as e:
-            print(f"Error loading task list: {e}")
-            # Inform constructor to create a new one (handled by the initial check)
+            raise RuntimeError(f"Cannot read task list file '{self.file_path}': {e}")
         except json.JSONDecodeError as e:
-            print(f"Error decoding JSON from task list: {e}")
-            # Potentially handle corrupted file by creating a new list or raising error
-            self.task_data = None # Or some default structure
+            raise RuntimeError(f"Corrupt task list file '{self.file_path}': {e}")
 
     def add_task(self, subject, description, priority, status="open"):
         new_task = {

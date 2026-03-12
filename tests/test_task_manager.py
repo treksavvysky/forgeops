@@ -145,5 +145,14 @@ class TestTaskManager(unittest.TestCase):
         result = tm.add_comment_to_task("non-existent-id", "A comment")
         self.assertFalse(result)
 
+    def test_corrupt_json_raises_error(self):
+        list_name = self._generate_unique_list_name()
+        file_path = os.path.join(self.TEST_TASK_LISTS_DIR, f"{list_name}.json")
+        with open(file_path, 'w') as f:
+            f.write("{not valid json")
+        with self.assertRaises(RuntimeError) as ctx:
+            TaskManager(list_name, self.TEST_USER, self.TEST_ASSOCIATION)
+        self.assertIn("Corrupt task list file", str(ctx.exception))
+
 if __name__ == '__main__':
     unittest.main()
