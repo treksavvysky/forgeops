@@ -3,7 +3,7 @@ Create Issue Command - Interactive issue creation
 """
 
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 
 from core.issue_tracker import IssueTracker
 
@@ -43,7 +43,7 @@ def create_issue():
         "title": title,
         "description": description,
         "repository": repo_name,
-        "created_at": datetime.utcnow().isoformat() + "Z"
+        "created_at": datetime.now(UTC).isoformat()
     }
     
     # Show preview and confirm

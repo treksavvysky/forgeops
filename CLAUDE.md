@@ -66,6 +66,5 @@ uv sync
 
 - The project name in `pyproject.toml` is still `jules-dev-kit` (the original name before rename to ForgeOps).
 - No CI/CD, linter, or formatter configured. The roadmap (`docs/ROADMAP.md`) plans ruff, mypy, and GitHub Actions.
-- Test coverage is limited to `TaskManager` only (`tests/test_task_manager.py`). Tests use `unittest.TestCase` style (not pytest fixtures). No tests exist for commands or core issue/repo logic.
-- `pytest` and `datetime-truncate` are test dependencies but neither is declared in `pyproject.toml` — they must be available in the `uv` environment.
+- Tests use `unittest.TestCase` style (not pytest fixtures). Install test deps with `uv sync --extra test`.
 - `create-issue` is interactive (prompts for input via `input()`) — it cannot be used non-interactively without modification.

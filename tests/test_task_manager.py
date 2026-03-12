@@ -4,7 +4,7 @@ import json
 import shutil
 import uuid
 from datetime_truncate import truncate
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # Adjust the path to import TaskManager from the core directory
 import sys
@@ -58,7 +58,7 @@ class TestTaskManager(unittest.TestCase):
             "name": list_name,
             "association": "dummy_association",
             "created_by": "dummy_user",
-            "created_on": datetime.utcnow().isoformat(),
+            "created_on": datetime.now(UTC).isoformat(),
             "tasks": [{"task_id": "dummy_id", "subject": "Dummy Task"}]
         }
         with open(file_path, 'w') as f:
@@ -82,7 +82,7 @@ class TestTaskManager(unittest.TestCase):
         priority = "high"
         
         # Store current time before adding task, truncated to seconds for comparison
-        time_before_add = truncate(datetime.utcnow().replace(tzinfo=timezone.utc), 'second')
+        time_before_add = truncate(datetime.now(UTC), 'second')
 
         new_task = tm.add_task(subject, description, priority, status="pending")
         
@@ -98,7 +98,7 @@ class TestTaskManager(unittest.TestCase):
         self.assertEqual(task_in_data['comments'], [])
         
         # Compare dates (ignoring microseconds for robustness)
-        task_created_at = truncate(datetime.fromisoformat(task_in_data['date_created'].replace('Z', '+00:00')).replace(tzinfo=timezone.utc), 'second')
+        task_created_at = truncate(datetime.fromisoformat(task_in_data['date_created']), 'second')
         self.assertGreaterEqual(task_created_at, time_before_add)
 
         # Check if file is updated
@@ -118,7 +118,7 @@ class TestTaskManager(unittest.TestCase):
         comment_text = "This is a test comment."
 
         # Store current time before adding comment, truncated to seconds for comparison
-        time_before_comment = truncate(datetime.utcnow().replace(tzinfo=timezone.utc), 'second')
+        time_before_comment = truncate(datetime.now(UTC), 'second')
         
         result = tm.add_comment_to_task(task_id, comment_text)
         self.assertTrue(result)
@@ -129,7 +129,7 @@ class TestTaskManager(unittest.TestCase):
         self.assertEqual(comment_in_data['comment'], comment_text)
         self.assertTrue('timestamp' in comment_in_data)
 
-        comment_timestamp = truncate(datetime.fromisoformat(comment_in_data['timestamp'].replace('Z', '+00:00')).replace(tzinfo=timezone.utc), 'second')
+        comment_timestamp = truncate(datetime.fromisoformat(comment_in_data['timestamp']), 'second')
         self.assertGreaterEqual(comment_timestamp, time_before_comment)
 
         # Check if file is updated

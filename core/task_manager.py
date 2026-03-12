@@ -1,7 +1,7 @@
 import json
 import os
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 class TaskManager:
     def __init__(self, task_list_name, created_by, association):
@@ -20,7 +20,7 @@ class TaskManager:
                 "name": task_list_name,
                 "association": association,
                 "created_by": created_by,
-                "created_on": datetime.utcnow().isoformat(),
+                "created_on": datetime.now(UTC).isoformat(),
                 "tasks": []
             }
             self._save_task_list()
@@ -50,7 +50,7 @@ class TaskManager:
             "subject": subject,
             "description": description,
             "status": status,
-            "date_created": datetime.utcnow().isoformat(),
+            "date_created": datetime.now(UTC).isoformat(),
             "priority": priority,
             "comments": []
         }
@@ -63,7 +63,7 @@ class TaskManager:
             if task["task_id"] == task_id:
                 comment = {
                     "comment": comment_text,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(UTC).isoformat()
                 }
                 task["comments"].append(comment)
                 self._save_task_list()
