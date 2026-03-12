@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# misc
+docs/SMI-20260312-001.md
+forgeops.db
+
