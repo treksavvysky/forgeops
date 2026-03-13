@@ -221,20 +221,73 @@ No ORM, no migrations framework, no linter/formatter configured. All database ac
 
 ---
 
+## Target Data Model
+
+Five core objects make up the work ledger. See ROADMAP.md for full field definitions.
+
+```
+┌──────────────┐       ┌──────────────────┐       ┌──────────────┐
+│  Repository  │◄──FK──│    Work Item      │──FK──►│  Assignment  │
+│              │       │  (issue / task)   │       │              │
+│  repo_id     │       │  task_id          │       │  assignment_id│
+│  name        │       │  repo_id (FK)     │       │  task_id (FK)│
+│  org         │       │  title            │       │  executor    │
+│  default_branch│     │  description      │       │  executor_type│
+│  status      │       │  state            │       │  assigned_at │
+│  url         │       │  priority         │       └──────────────┘
+│  description │       │  is_blocked       │
+└──────────────┘       │  blocked_reason   │       ┌──────────────────┐
+                       │  parent_id (FK)   │──FK──►│ Execution Record │
+                       │  created_by       │       │                  │
+                       │  created_at       │       │  run_id          │
+                       │  updated_at       │       │  task_id (FK)    │
+                       └──────────────────┘       │  executor        │
+                              │                    │  branch          │
+                              │ FK                 │  commit          │
+                              ▼                    │  status          │
+                       ┌──────────────┐           │  logs_ref        │
+                       │   Review     │           │  artifact_ref    │
+                       │              │           │  created_at      │
+                       │  review_id   │           └──────────────────┘
+                       │  task_id (FK)│
+                       │  reviewer    │
+                       │  decision    │
+                       │  note        │
+                       │  created_at  │
+                       └──────────────┘
+```
+
+### State Engine
+
+ForgeOps owns the state machine. The lifecycle is agent-aware — not generic project management.
+
+```
+queued → assigned → executing → completed → awaiting_review → accepted → closed
+                        ↑                                        │
+                        └──────── rework_required ───────────────┘
+```
+
+**Key rules:**
+- **Block mechanism** is orthogonal — `is_blocked` + `blocked_reason` on any state. Unblocking resumes where it was.
+- **Repo concurrency guard** — one `executing` item per `repo_id` at a time. Prevents conflicting changes by parallel agents.
+- **Parallel work** — no global locks. An executor can have multiple assignments across different repos in different states concurrently.
+- **Event hooks** (Phase 3) — layered on top. Seven events (`on_state_change`, `on_blocked`/`on_unblocked`, `on_assigned`, `on_execution_complete`, `on_review_submitted`, `on_repo_conflict`, `on_rework`) fire after transitions commit.
+
+---
+
 ## Mapping to Roadmap
 
 ### What exists today
 
-| Roadmap capability | Current state | Where in code |
-|--------------------|---------------|---------------|
-| Repositories | Name registry, format validation, suggestions | `RepositoryManager`, `repos.json` |
-| Issues | CRUD via CLI, JSON storage, SQLite mirror | `IssueTracker`, `FileManager`, `Database` |
-| Tasks | Standalone JSON-based system, no CLI | `TaskManager`, `task_lists/` |
-| Assignments | Not implemented | — |
-| Progress states | Tasks have free-text status; issues have none | `TaskManager.update_task()` |
-| Artifacts | Not implemented | — |
-| Reviews | Not implemented | — |
-| Session continuity | Not implemented | — |
+| Target object | Current state | Where in code |
+|---------------|---------------|---------------|
+| Repository | Name registry, format validation, suggestions. No org, branch, status, url, description. | `RepositoryManager`, `repos.json` |
+| Work Item | Two disconnected systems. Issues: JSON files + SQLite mirror, no state field. Tasks: JSON files, free-text status, no CLI. | `IssueTracker`, `FileManager`, `Database`, `TaskManager` |
+| Assignment | Not implemented | — |
+| Execution Record | Not implemented | — |
+| Review | Not implemented | — |
+| State Engine | No lifecycle states. Tasks have free-text status; issues have none. | — |
+| Session Continuity | Not implemented. No `status`, `snapshot`, `resume`, or `next` commands. | — |
 
 ### Phase 1 changes to this architecture
 
@@ -243,22 +296,26 @@ The most significant architectural change is **retiring dual storage**. After Ph
 - `issues/*.json`, `issue_counter.txt`, `repos.json`, `task_lists/*.json` are replaced by SQLite via SQLModel
 - `FileManager` and `TaskManager` are retired
 - Issues and tasks merge into a single `work_items` table with Pydantic validation
+- Repositories gain full metadata: `org`, `default_branch`, `status` (active/archived), `url`, `description`
+- Pydantic models defined for all five core objects (`WorkItem`, `Repository`, `Assignment`, `ExecutionRecord`, `Review`)
 - All interfaces (CLI, API) read/write through the same data layer
 - Hardcoded paths move to `config.py` with environment variable support
 
 ### Phase 2 additions to this architecture
 
 New core modules for:
-- State machine (allowed transitions between work item statuses)
-- Assignment tracking (who/what is responsible, ownership history)
-- Session snapshots (work-state capture and resume)
-- Review queue (AI-generated code awaiting human inspection)
-- Artifacts (links between work items and external references)
-- Task hierarchy (parent-child relationships, progress rollup)
+- **State engine** — 8-state lifecycle with transition validation, orthogonal block mechanism, repo concurrency guard
+- **Assignments** — separate table, append-only history, `executor_type` discriminator (human | agent)
+- **Execution records** — structured record of agent runs (branch, commit, status, logs_ref, artifact_ref), multiple attempts per work item
+- **Review workflow** — review queue fed by execution records, append-only decision log
+- **Session continuity** — `status` (overview), `snapshot`/`resume` (cross-session state), `next` (human attention queue), activity log
+- **Artifacts** — run-specific refs on execution records + general-purpose attachments table
+- **Task hierarchy** — parent-child relationships, progress rollup
 
 ### Phase 3 additions to this architecture
 
 - Full CRUD REST API replacing the current single-endpoint `api.py`
 - Authentication layer (bearer token / API key)
-- Ecosystem hooks (JCT integration, event bus, MCP server)
+- **Event hooks** — 7 subscribable events layered on the state engine, driving JCT integration and external notifications
+- **MCP server** — AI agents read/update the ledger directly
 - The three-layer design remains, but the interface layer expands significantly
