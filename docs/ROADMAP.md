@@ -137,10 +137,20 @@ ForgeOps owns the state machine. The lifecycle reflects the AI-assisted workflow
 - [ ] **API authentication:** Bearer token or API key auth.
 - [ ] **Filtering & search:** Query params for state, priority, assignee, repository, is_blocked. Full-text search on title/description.
 
-### Ecosystem Hooks
+### Event Hooks
 
-- [ ] **JCT integration:** When JCT dispatches a task to an AI agent, ForgeOps creates an assignment and work item. When the agent completes, an execution record is logged and the item moves to `awaiting_review`.
-- [ ] **Event bus:** Fire events on state transitions (e.g., item moved to `awaiting_review`) that other systems can subscribe to.
+Layered on top of the Phase 2 state engine. The engine already records state changes in the activity log — hooks make them actionable by external systems.
+
+- [ ] **Hook system:** Subscribe callbacks to state engine events. Hooks fire after the transition is committed.
+- [ ] **State engine events:**
+    - `on_state_change` — any lifecycle transition (includes old state, new state, task_id)
+    - `on_blocked` / `on_unblocked` — block flag toggled
+    - `on_assigned` — new assignment record created
+    - `on_execution_complete` — item moves to `completed`
+    - `on_review_submitted` — review record created (accept or rework)
+    - `on_repo_conflict` — `executing` transition rejected by concurrency guard
+    - `on_rework` — item enters `rework_required`
+- [ ] **JCT integration:** When JCT dispatches a task, ForgeOps creates an assignment and work item. When the agent completes, an execution record is logged and the item moves to `awaiting_review`. Driven by `on_state_change` and `on_assigned` hooks.
 - [ ] **MCP server:** Expose ForgeOps as an MCP tool server so AI agents can read/update the ledger directly.
 
 ### Quality & DevOps
