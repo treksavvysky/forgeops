@@ -98,6 +98,7 @@ ForgeOps owns the state machine. The lifecycle reflects the AI-assisted workflow
 
 - [ ] **Work snapshots:** Capture current state across all open work items — what's executing, what's blocked, what's awaiting review. CLI: `snapshot`, `resume` (shows snapshot from last session).
 - [ ] **Activity log:** Append-only record of state changes, comments, and assignments — so the operator can see what happened while they were away.
+- [ ] **Status overview:** `status` command — single view of where things stand. Items grouped by state, blocked items with reasons, repo concurrency (which repos have active execution), recent activity.
 - [ ] **Next-actions view:** `next` command that surfaces the highest-priority items needing human attention (items in `awaiting_review`, blocked items, stale assignments).
 
 ### Execution Records
