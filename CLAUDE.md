@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ForgeOps is a Python CLI issue tracking system with SQLite storage and a FastAPI REST API. It manages issues and repositories through an interactive command-line interface. The project uses dual storage: individual JSON files per issue (`issues/`) and a SQLite database (`forgeops.db`), with a migration command to sync between them.
+ForgeOps is a cross-repo work ledger for AI-assisted software development. It tracks issues, tasks, assignments, and progress so that work remains organized, reviewable, and resumable across sessions and repositories. See `docs/PURPOSE.md` for scope boundaries and `docs/VISION.md` for long-term direction.
+
+The current codebase is a Python CLI issue tracker with SQLite storage and a FastAPI REST API — the foundation that the roadmap builds on. See `docs/ARCHITECTURE.md` for the full current architecture, target data model, and state engine design.
 
 ## Commands
 
@@ -12,14 +14,13 @@ ForgeOps is a Python CLI issue tracking system with SQLite storage and a FastAPI
 ```bash
 uv run python main.py <command>
 ```
-
-Available commands: `create-issue`, `list-issues`, `list-issues --repo <name>`, `view-issue <ISSUE-ID>`, `list-repos`, `add-repo <repo-name>`, `migrate-issues`, `help`
+Available commands: `create-issue`, `list-issues`, `list-issues --repo <name>`, `view-issue <ISSUE-ID>`, `list-repos`, `add-repo <repo-name>`, `migrate-issues`. Run `uv run python main.py --help` for full help.
 
 ### Running the API
 ```bash
 uv run uvicorn api:app --reload
 ```
-Serves at `http://localhost:8000`. Endpoints: `GET /issues`, docs at `/docs`. No authentication — the API is open.
+Serves at `http://localhost:8000`. Endpoints: `GET /issues`, docs at `/docs`. No authentication.
 
 ### Running Tests
 ```bash
@@ -27,6 +28,7 @@ uv run python -m pytest tests/ -v
 # Single test:
 uv run python -m pytest tests/test_task_manager.py::TestTaskManager::test_add_task -v
 ```
+Tests use `unittest.TestCase` style. Install test deps with `uv sync --extra test`.
 
 ### Dependencies
 Managed with `uv` (lock file: `uv.lock`). Python 3.13+ required.
@@ -36,35 +38,21 @@ uv sync
 
 ## Architecture
 
-**CLI routing**: `main.py` uses [Typer](https://typer.tiangolo.com/) to define subcommands that dispatch to handler functions in `commands/`. Run `uv run python main.py --help` for auto-generated help. Shell completion is available via `--install-completion`.
+See `docs/ARCHITECTURE.md` for the complete architecture document including:
+- Current three-layer design (commands → core → utils)
+- Dual storage model (JSON files + SQLite) and its limitations
+- Target data model (five core objects: Repository, Work Item, Assignment, Execution Record, Review)
+- State engine (8-state lifecycle, block mechanism, repo concurrency guard)
+- Roadmap mapping (what exists today vs. what each phase changes)
 
-**Three-layer structure**:
-- `commands/` — CLI command handlers (user interaction, argument handling)
-- `core/` — Business logic (IssueTracker, FileManager, RepositoryManager, TaskManager, Database)
-- `utils/` — Input validation (`validators.py`) and formatting helpers (`helpers.py`)
+## Development Workflow
 
-**Dual storage model**: Issues exist as individual JSON files in `issues/` AND in SQLite (`forgeops.db`). These are not automatically synced — `migrate-issues` imports JSON files into SQLite. The API reads from SQLite only. New issues created via CLI write to JSON files and increment `issue_counter.txt`.
-
-**Database schema** (`core/db.py`): Two tables — `repositories` (id, name) and `issues` (id, title, description, repository FK, created_at). Raw sqlite3 queries, no ORM.
-
-**Repository registry**: `repos.json` holds the list of valid repository names. The RepositoryManager validates repo names against this list and suggests similar names on mismatch.
-
-**Task lists**: `core/task_manager.py` manages JSON-based task lists in `task_lists/`, separate from the issue system. Not yet integrated into the CLI.
-
-## Key Files
-
-- `main.py` — CLI entry point and command router
-- `api.py` — FastAPI app with GET /issues endpoint
-- `core/db.py` — SQLite wrapper, schema creation, CRUD
-- `core/issue_tracker.py` — Issue creation orchestration with repo validation
-- `core/file_manager.py` — JSON file I/O, issue ID generation (ISSUE-NNN format)
-- `core/repository_manager.py` — Repo registry management, name validation
-- `repos.json` — Repository name registry
-- `issue_counter.txt` — Next issue ID counter
+- **Branch policy:** All work happens on `main`. Do not create feature branches.
+- **Commits:** Commit as you complete tasks and make progress through `docs/ROADMAP.md`. Each commit should be a meaningful unit of work with a clear message. Update the ROADMAP checkboxes when items are completed, including the date and commit hash.
+- **Roadmap:** `docs/ROADMAP.md` is the build plan. It defines the core data objects, state engine, and phased delivery. Refer to it before starting new work.
+- `create-issue` is interactive (prompts via `input()`) — it cannot be used non-interactively without modification.
 
 ## Notes
 
 - The project name in `pyproject.toml` is still `jules-dev-kit` (the original name before rename to ForgeOps).
-- No CI/CD, linter, or formatter configured. The roadmap (`docs/ROADMAP.md`) plans ruff, mypy, and GitHub Actions.
-- Tests use `unittest.TestCase` style (not pytest fixtures). Install test deps with `uv sync --extra test`.
-- `create-issue` is interactive (prompts for input via `input()`) — it cannot be used non-interactively without modification.
+- No CI/CD, linter, or formatter configured. The roadmap plans ruff, mypy, and GitHub Actions.
