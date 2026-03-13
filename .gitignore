@@ -9,7 +9,18 @@ wheels/
 # Virtual environments
 .venv
 
+# Testing
+.pytest_cache/
+
+# Database
+forgeops.db
+
+# Legacy data files (no longer used by code, kept for reference)
+issues/
+issue_counter.txt
+repos.json
+task_lists/
+
 # misc
 docs/SMI-20260312-001.md
-forgeops.db
 
