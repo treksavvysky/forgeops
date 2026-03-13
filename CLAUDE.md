@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ForgeOps is a cross-repo work ledger for AI-assisted software development. It tracks issues, tasks, assignments, and progress so that work remains organized, reviewable, and resumable across sessions and repositories. See `docs/PURPOSE.md` for scope boundaries and `docs/VISION.md` for long-term direction.
 
-The codebase is a Python CLI + REST API backed by SQLite via SQLModel. Phase 1 (Unified Foundation) and Phase 2 (Work Ledger Capabilities) are complete — all data lives in a single SQLite database with Pydantic/SQLModel models. The CLI has 27 commands covering the full work item lifecycle. See `docs/ARCHITECTURE.md` for full architecture and `docs/ROADMAP.md` for the build plan.
+The codebase is a Python CLI + REST API backed by SQLite via SQLModel. Phases 1-3 (Unified Foundation, Work Ledger, API & Ecosystem) are largely complete — all data lives in a single SQLite database with Pydantic/SQLModel models. The CLI has 27 commands, the API has full CRUD with bearer token auth, and the event hook system fires on all state engine operations. See `docs/ARCHITECTURE.md` for full architecture and `docs/ROADMAP.md` for the build plan.
 
 ## Commands
 
@@ -30,9 +30,9 @@ Key commands:
 
 ### Running the API
 ```bash
-uv run uvicorn api:app --reload
+uv run uvicorn api:app --reload --host 127.0.0.1 --port 8002
 ```
-Serves at `http://localhost:8000`. Endpoints: `GET /issues`, `GET /repositories`, docs at `/docs`. No authentication.
+Serves at `http://localhost:8002`. Full CRUD API — docs at `/docs`. Auth via `API_BEARER_TOKEN` env var (skipped if unset). Port configurable via `FORGEOPS_API_PORT` (default 8002).
 
 ### Running Tests
 ```bash
@@ -56,6 +56,7 @@ Runtime: FastAPI, SQLModel (includes SQLAlchemy + Pydantic), Rich, Typer, uvicor
 - `config.py` — Centralized configuration with env var support (`FORGEOPS_DB_PATH`, `FORGEOPS_BASE_DIR`)
 - `core/database.py` — SQLModel data access layer (single source of truth)
 - `core/state_engine.py` — Transition validation and repo concurrency guard
+- `core/hooks.py` — Event hook system (7 events, subscribe/fire pattern)
 - `core/repository_manager.py` — Repository validation and management
 - `commands/` — CLI command handlers (one per file, 14 modules)
 - `api.py` — FastAPI REST endpoints

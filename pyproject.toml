@@ -16,4 +16,5 @@ dependencies = [
 test = [
     "pytest",
     "datetime-truncate",
+    "httpx",
 ]

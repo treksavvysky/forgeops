@@ -6,6 +6,10 @@ from pathlib import Path
 # Base directory — defaults to current working directory, overridable via env var.
 BASE_DIR = Path(os.environ.get("FORGEOPS_BASE_DIR", "."))
 
+# API server
+API_HOST = os.environ.get("FORGEOPS_API_HOST", "127.0.0.1")
+API_PORT = int(os.environ.get("FORGEOPS_API_PORT", "8002"))
+
 # SQLite database path
 DB_PATH = Path(os.environ.get("FORGEOPS_DB_PATH", str(BASE_DIR / "forgeops.db")))
 

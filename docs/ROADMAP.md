@@ -123,23 +123,16 @@ ForgeOps owns the state machine. The lifecycle reflects the AI-assisted workflow
 
 ### Web API
 
-- [ ] **Full CRUD API:** POST, GET, PATCH, DELETE for work items, repositories, assignments, execution records, reviews, and attachments.
-- [ ] **API authentication:** Bearer token or API key auth.
-- [ ] **Filtering & search:** Query params for state, priority, assignee, repository, is_blocked. Full-text search on title/description.
+- [x] **Full CRUD API:** POST, GET, PATCH, DELETE for work items, repositories, assignments, execution records, reviews, and attachments. Plus `/status`, `/activity`, `/executors/{name}/work-items` endpoints. *(done 2026-03-13)*
+- [x] **API authentication:** Bearer token auth via `API_BEARER_TOKEN` env var. Skipped when unset. *(done 2026-03-13)*
+- [x] **Filtering & search:** Query params for state, priority, is_blocked, repo, parent_id on `/work-items`. *(done 2026-03-13)*
 
 ### Event Hooks
 
 Layered on top of the Phase 2 state engine. The engine already records state changes in the activity log — hooks make them actionable by external systems.
 
-- [ ] **Hook system:** Subscribe callbacks to state engine events. Hooks fire after the transition is committed.
-- [ ] **State engine events:**
-    - `on_state_change` — any lifecycle transition (includes old state, new state, task_id)
-    - `on_blocked` / `on_unblocked` — block flag toggled
-    - `on_assigned` — new assignment record created
-    - `on_execution_complete` — item moves to `completed`
-    - `on_review_submitted` — review record created (accept or rework)
-    - `on_repo_conflict` — `executing` transition rejected by concurrency guard
-    - `on_rework` — item enters `rework_required`
+- [x] **Hook system:** `core/hooks.py` — `HookRegistry` with subscribe/unsubscribe/fire. Decorator and programmatic registration. Failing handlers logged, not raised. *(done 2026-03-13)*
+- [x] **State engine events:** All 7 events implemented and firing from `core/database.py`: `on_state_change`, `on_blocked`/`on_unblocked`, `on_assigned`, `on_execution_complete`, `on_review_submitted`, `on_repo_conflict`, `on_rework`. *(done 2026-03-13)*
 - [ ] **JCT integration:** When JCT dispatches a task, ForgeOps creates an assignment and work item. When the agent completes, an execution record is logged and the item moves to `awaiting_review`. Driven by `on_state_change` and `on_assigned` hooks.
 - [ ] **MCP server:** Expose ForgeOps as an MCP tool server so AI agents can read/update the ledger directly.
 

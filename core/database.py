@@ -211,6 +211,7 @@ def transition_work_item(
 ) -> WorkItem:
     """Transition a work item to a new state with validation and concurrency guard."""
     from core.state_engine import validate_transition, check_repo_concurrency
+    from core.hooks import hooks, HookEvent
 
     with Session(engine) as session:
         item = session.get(WorkItem, task_id)
@@ -221,7 +222,13 @@ def transition_work_item(
         validate_transition(old_state, new_state)
 
         if new_state == WorkItemState.executing:
-            check_repo_concurrency(engine, item.repo_id, task_id)
+            try:
+                check_repo_concurrency(engine, item.repo_id, task_id)
+            except Exception as e:
+                hooks.fire(HookEvent.on_repo_conflict, {
+                    "task_id": task_id, "repo_id": item.repo_id, "error": str(e),
+                })
+                raise
 
         item.state = new_state
         item.updated_at = datetime.now(UTC)
@@ -231,10 +238,22 @@ def transition_work_item(
         _log_activity(session, task_id, ActivityAction.state_change,
                       detail=f"{old_state.value} → {new_state.value}", actor=actor)
         session.refresh(item)
-        return item
+
+    # Fire hooks after session is committed
+    hooks.fire(HookEvent.on_state_change, {
+        "task_id": task_id, "old_state": old_state.value, "new_state": new_state.value, "actor": actor,
+    })
+    if new_state == WorkItemState.completed:
+        hooks.fire(HookEvent.on_execution_complete, {"task_id": task_id, "actor": actor})
+    if new_state == WorkItemState.rework_required:
+        hooks.fire(HookEvent.on_rework, {"task_id": task_id, "actor": actor})
+
+    return item
 
 
 def block_work_item(engine, task_id: int, reason: str, *, actor: Optional[str] = None) -> WorkItem:
+    from core.hooks import hooks, HookEvent
+
     with Session(engine) as session:
         item = session.get(WorkItem, task_id)
         if not item:
@@ -248,10 +267,14 @@ def block_work_item(engine, task_id: int, reason: str, *, actor: Optional[str] =
         _log_activity(session, task_id, ActivityAction.blocked,
                       detail=reason, actor=actor)
         session.refresh(item)
-        return item
+
+    hooks.fire(HookEvent.on_blocked, {"task_id": task_id, "reason": reason, "actor": actor})
+    return item
 
 
 def unblock_work_item(engine, task_id: int, *, actor: Optional[str] = None) -> WorkItem:
+    from core.hooks import hooks, HookEvent
+
     with Session(engine) as session:
         item = session.get(WorkItem, task_id)
         if not item:
@@ -264,7 +287,9 @@ def unblock_work_item(engine, task_id: int, *, actor: Optional[str] = None) -> W
 
         _log_activity(session, task_id, ActivityAction.unblocked, actor=actor)
         session.refresh(item)
-        return item
+
+    hooks.fire(HookEvent.on_unblocked, {"task_id": task_id, "actor": actor})
+    return item
 
 
 def get_children(engine, parent_id: int) -> list[WorkItem]:
@@ -291,6 +316,8 @@ def create_assignment(
     *,
     actor: Optional[str] = None,
 ) -> Assignment:
+    from core.hooks import hooks, HookEvent
+
     with Session(engine) as session:
         assignment = Assignment(
             task_id=task_id,
@@ -303,7 +330,12 @@ def create_assignment(
         _log_activity(session, task_id, ActivityAction.assigned,
                       detail=f"{executor} ({executor_type.value})", actor=actor)
         session.refresh(assignment)
-        return assignment
+
+    hooks.fire(HookEvent.on_assigned, {
+        "task_id": task_id, "executor": executor,
+        "executor_type": executor_type.value, "actor": actor,
+    })
+    return assignment
 
 
 def get_assignments(engine, task_id: int) -> list[Assignment]:
@@ -401,6 +433,8 @@ def create_review(
     note: Optional[str] = None,
     actor: Optional[str] = None,
 ) -> Review:
+    from core.hooks import hooks, HookEvent
+
     with Session(engine) as session:
         review = Review(
             task_id=task_id,
@@ -414,7 +448,12 @@ def create_review(
         _log_activity(session, task_id, ActivityAction.review_submitted,
                       detail=f"{decision.value} by {reviewer}", actor=actor)
         session.refresh(review)
-        return review
+
+    hooks.fire(HookEvent.on_review_submitted, {
+        "task_id": task_id, "reviewer": reviewer,
+        "decision": decision.value, "note": note, "actor": actor,
+    })
+    return review
 
 
 def get_reviews(engine, task_id: int) -> list[Review]:

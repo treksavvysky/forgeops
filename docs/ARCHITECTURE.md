@@ -14,7 +14,7 @@ See [PURPOSE.md](PURPOSE.md) for full scope boundaries. See [ROADMAP.md](ROADMAP
 
 ## Current Architecture
 
-*Updated after Phase 2 completion (2026-03-13).*
+*Updated after Phase 3 (API & Hooks) completion (2026-03-13).*
 
 ### Three-Layer Design
 
@@ -43,6 +43,7 @@ See [PURPOSE.md](PURPOSE.md) for full scope boundaries. See [ROADMAP.md](ROADMAP
 │  ┌─────────────────────────────┴───────────────────┐ │
 │  │  database.py        — SQLModel data access layer │ │
 │  │  state_engine.py    — transitions + concurrency  │ │
+│  │  hooks.py           — event hook registry        │ │
 │  │  repository_manager — repo validation + CRUD     │ │
 │  └──────────────────────────────────────────────────┘ │
 │  ┌──────────────────────────────────────────────────┐ │
@@ -249,12 +250,29 @@ Typer-based with 27 commands. Rich output for tables and panels. Interactive inp
 
 ### REST API (`api.py`)
 
-Two endpoints. No authentication. Reads/writes through `core/database.py`.
+Full CRUD API with bearer token auth (via `API_BEARER_TOKEN` env var, skipped if unset). Default port 8002 (configurable via `FORGEOPS_API_PORT`).
 
-| Endpoint | Method | Response |
-|----------|--------|----------|
-| `/issues` | GET | Work items (filterable by `repo`, `state`) |
-| `/repositories` | GET | Repository list (filterable by `include_archived`) |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/work-items` | GET | List work items (filter: repo, state, priority, is_blocked, parent_id) |
+| `/work-items` | POST | Create work item |
+| `/work-items/{id}` | GET | Get single work item |
+| `/work-items/{id}` | PATCH | Update work item fields |
+| `/work-items/{id}/transition` | POST | State transition with validation |
+| `/work-items/{id}/block` | POST | Block with reason |
+| `/work-items/{id}/unblock` | POST | Unblock |
+| `/work-items/{id}/children` | GET | List children with progress |
+| `/work-items/{id}/assignments` | GET/POST | List/create assignments |
+| `/work-items/{id}/assignments/current` | GET | Current assignment |
+| `/work-items/{id}/runs` | GET/POST | List/create execution records |
+| `/work-items/{id}/reviews` | GET/POST | List/create reviews |
+| `/work-items/{id}/attachments` | GET/POST | List/create attachments |
+| `/executors/{name}/work-items` | GET | Work items by executor |
+| `/repositories` | GET/POST | List/create repositories |
+| `/repositories/{name}` | GET/PATCH/DELETE | Repository CRUD |
+| `/activity` | GET | Activity log (filter: task_id, limit) |
+| `/status` | GET | Status overview (counts, executing, blocked, awaiting_review) |
+| `/issues` | GET | Legacy alias for `/work-items` |
 | `/docs` | GET | Auto-generated OpenAPI docs |
 
 ---
@@ -359,10 +377,14 @@ queued → assigned → executing → completed → awaiting_review → accepted
 - Task hierarchy — parent-child relationships with progress rollup
 - 27 CLI commands, 110 tests passing
 
-### Phase 3 additions to this architecture
+### Phase 3 (in progress)
 
-- Full CRUD REST API replacing the current single-endpoint `api.py`
-- Authentication layer (bearer token / API key)
-- **Event hooks** — 7 subscribable events layered on the state engine, driving JCT integration and external notifications
-- **MCP server** — AI agents read/update the ledger directly
-- The three-layer design remains, but the interface layer expands significantly
+Completed:
+- Full CRUD REST API with 20+ endpoints replacing the old 2-endpoint `api.py`
+- Bearer token auth (via `API_BEARER_TOKEN` env var)
+- Event hook system (`core/hooks.py`) — 7 events firing from database operations
+- 155 tests passing (45 new Phase 3 tests for API + hooks)
+
+Remaining:
+- JCT integration via hooks
+- MCP server for AI agent access
