@@ -1,42 +1,42 @@
-"""
-Add Repository Command - Add a new repository to the registry
-"""
+"""Add Repository Command - Add a new repository to the registry."""
 
-import sys
+from typing import Optional
 
+from rich.console import Console
+
+from core.database import create_db_and_tables, get_repositories
 from core.repository_manager import RepositoryManager
 
+console = Console()
 
-def add_repo(repo_name):
-    """Add a new repository to the registry."""
-    repo_manager = RepositoryManager()
-    
-    # Validate repository name
+
+def add_repo(
+    repo_name: str,
+    *,
+    org: Optional[str] = None,
+    default_branch: Optional[str] = None,
+    url: Optional[str] = None,
+    description: Optional[str] = None,
+) -> None:
+    engine = create_db_and_tables()
+    repo_manager = RepositoryManager(engine)
+
     is_valid, error_msg = repo_manager.validate_repo_name(repo_name)
     if not is_valid:
-        print(f"Invalid repository name: {error_msg}")
+        console.print(f"[red]Invalid repository name: {error_msg}[/red]")
         return
-    
-    try:
-        # Check if repo already exists
-        existing_repos = repo_manager.load_repositories()
-        if repo_name in existing_repos:
-            print(f"Repository '{repo_name}' already exists in registry.")
-            return
-        
-        # Add the repository
-        success = repo_manager.add_repository(repo_name)
-        
-        if success:
-            print(f"✅ Repository '{repo_name}' added successfully!")
-            
-            # Show updated count
-            updated_repos = repo_manager.load_repositories()
-            print(f"📊 Registry now contains {len(updated_repos)} repositories.")
-            print("Use 'python main.py list-repos' to see all repositories.")
-        else:
-            print(f"❌ Failed to add repository '{repo_name}'.")
-    
-    except Exception as e:
-        print(f"Error adding repository: {e}")
-        sys.exit(1)
+
+    success = repo_manager.add_repository(
+        repo_name,
+        org=org,
+        default_branch=default_branch,
+        url=url,
+        description=description,
+    )
+
+    if success:
+        repos = get_repositories(engine)
+        console.print(f"[green]Repository '{repo_name}' added successfully![/green]")
+        console.print(f"Registry now contains {len(repos)} repositories.")
+    else:
+        console.print(f"[yellow]Repository '{repo_name}' already exists.[/yellow]")

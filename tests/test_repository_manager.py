@@ -1,29 +1,28 @@
-import json
+"""Tests for RepositoryManager (SQLModel-backed)."""
+
 import os
 import unittest
 
-from core.db import Database
+from core.database import add_repository, create_db_and_tables
 from core.repository_manager import RepositoryManager
 
 
 class TestRepositoryManager(unittest.TestCase):
 
-    TEST_REPOS_FILE = "test_repos.json"
-    TEST_DB_PATH = "test_repos.db"
+    TEST_DB = "test_repo_mgr.db"
 
     def setUp(self):
         self._cleanup()
-        self.db = Database(db_path=self.TEST_DB_PATH)
-        self.rm = RepositoryManager(repos_file=self.TEST_REPOS_FILE, db=self.db)
+        self.engine = create_db_and_tables(self.TEST_DB)
+        self.rm = RepositoryManager(self.engine)
 
     def tearDown(self):
-        self.db.close()
+        self.engine.dispose()
         self._cleanup()
 
     def _cleanup(self):
-        for path in (self.TEST_REPOS_FILE, self.TEST_DB_PATH):
-            if os.path.isfile(path):
-                os.remove(path)
+        if os.path.isfile(self.TEST_DB):
+            os.remove(self.TEST_DB)
 
     # --- validate_repo_name ---
 
@@ -50,16 +49,19 @@ class TestRepositoryManager(unittest.TestCase):
     # --- suggest_repositories ---
 
     def test_exact_match_case_insensitive(self):
+        add_repository(self.engine, "Jules-Dev-Kit")
         found, suggestions = self.rm.suggest_repositories("Jules-Dev-Kit")
         self.assertTrue(found)
         self.assertEqual(suggestions, [])
 
     def test_partial_match_returns_suggestions(self):
+        add_repository(self.engine, "jules-dev-kit")
         found, suggestions = self.rm.suggest_repositories("jules")
         self.assertFalse(found)
         self.assertIn("jules-dev-kit", suggestions)
 
     def test_no_match_returns_empty(self):
+        add_repository(self.engine, "some-repo")
         found, suggestions = self.rm.suggest_repositories("zzz-nonexistent")
         self.assertFalse(found)
         self.assertEqual(suggestions, [])
@@ -83,25 +85,32 @@ class TestRepositoryManager(unittest.TestCase):
         repos = self.rm.load_repositories()
         self.assertEqual(repos, sorted(repos))
 
-    def test_add_repository_syncs_to_db(self):
-        self.rm.add_repository("db-synced")
-        db_repos = self.db.get_repositories()
-        self.assertIn("db-synced", db_repos)
+    # --- update / remove ---
 
-    # --- _init_repos_registry ---
+    def test_update_repository(self):
+        self.rm.add_repository("updatable")
+        result = self.rm.update_repository("updatable", org="new-org")
+        self.assertIsNotNone(result)
+        self.assertEqual(result.org, "new-org")
 
-    def test_default_repos_created(self):
-        repos = self.rm.load_repositories()
-        self.assertIn("jules-dev-kit", repos)
-        self.assertTrue(len(repos) >= 5)
+    def test_remove_repository(self):
+        self.rm.add_repository("removable")
+        self.assertTrue(self.rm.remove_repository("removable"))
+        self.assertNotIn("removable", self.rm.load_repositories())
 
-    def test_existing_registry_not_overwritten(self):
-        # Write a custom registry, then create a new RepositoryManager
-        with open(self.TEST_REPOS_FILE, "w") as f:
-            json.dump({"repositories": ["custom-repo"]}, f)
-        rm2 = RepositoryManager(repos_file=self.TEST_REPOS_FILE, db=self.db)
-        repos = rm2.load_repositories()
-        self.assertEqual(repos, ["custom-repo"])
+    def test_remove_nonexistent_returns_false(self):
+        self.assertFalse(self.rm.remove_repository("ghost"))
+
+    # --- get_repository ---
+
+    def test_get_existing(self):
+        self.rm.add_repository("findme")
+        repo = self.rm.get_repository("findme")
+        self.assertIsNotNone(repo)
+        self.assertEqual(repo.name, "findme")
+
+    def test_get_nonexistent_returns_none(self):
+        self.assertIsNone(self.rm.get_repository("nope"))
 
 
 if __name__ == "__main__":

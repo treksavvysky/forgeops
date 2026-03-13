@@ -33,23 +33,23 @@ ForgeOps does not duplicate these systems. It is the ledger that records *what w
 
 ### Data Model
 
-- [ ] **Unified work-item schema:** Collapse issues and tasks into one `work_items` table with: task_id, repo_id (FK), title, description, state, priority, is_blocked, blocked_reason, parent_id (for sub-tasks), created_by, created_at, updated_at.
-- [ ] **Pydantic models:** Define `WorkItem`, `Repository`, `Assignment`, `ExecutionRecord`, and `Review` models for strict validation across CLI, API, and DB layers.
-- [ ] **SQLModel integration:** Replace raw sqlite3 queries and JSON file storage with SQLModel for type-safe DB interactions. Retire the dual-storage (JSON files + SQLite) model.
-- [ ] **Centralized configuration:** Move hardcoded paths (`forgeops.db`, `issues/`) to a `config.py` supported by environment variables.
-- [ ] **Migration path:** Provide a one-time migration from the current JSON files + old schema into the new unified schema.
+- [x] **Unified work-item schema:** Collapse issues and tasks into one `work_items` table with: task_id, repo_id (FK), title, description, state, priority, is_blocked, blocked_reason, parent_id (for sub-tasks), created_by, created_at, updated_at. *(done 2026-03-13)*
+- [x] **Pydantic models:** Define `WorkItem`, `Repository`, `Assignment`, `ExecutionRecord`, and `Review` models for strict validation across CLI, API, and DB layers. *(done 2026-03-13)*
+- [x] **SQLModel integration:** Replace raw sqlite3 queries and JSON file storage with SQLModel for type-safe DB interactions. Retire the dual-storage (JSON files + SQLite) model. *(done 2026-03-13)*
+- [x] **Centralized configuration:** Move hardcoded paths (`forgeops.db`, `issues/`) to a `config.py` supported by environment variables. *(done 2026-03-13)*
+- [x] **Migration path:** Provide a one-time migration from the current JSON files + old schema into the new unified schema. *(done 2026-03-13)*
 
 ### Repositories
 
-- [ ] **Repository metadata:** Extend the `repositories` table with org, default_branch, status (active/archived), url, and description fields.
-- [ ] **Repository CRUD:** Add `update-repo` and `remove-repo` CLI commands.
-- [ ] **Repository status:** Filter commands respect active/archived status. Archived repos excluded from default views.
+- [x] **Repository metadata:** Extend the `repositories` table with org, default_branch, status (active/archived), url, and description fields. *(done 2026-03-13)*
+- [x] **Repository CRUD:** Add `update-repo` and `remove-repo` CLI commands. *(done 2026-03-13)*
+- [x] **Repository status:** Filter commands respect active/archived status. Archived repos excluded from default views. *(done 2026-03-13)*
 
 ### CLI & UX
 
 - [x] **Modern CLI framework:** Migrated to Typer. *(done 2026-03-12, `218b783`)*
-- [ ] **Rich CLI output:** Use `rich` (already installed as Typer dependency) for color-coded status indicators and formatted tables.
-- [ ] **Repository autocompletion:** Typer callback that completes `--repo` values from the registry. *(basic shell completion available via `--install-completion`)*
+- [x] **Rich CLI output:** Use `rich` (already installed as Typer dependency) for color-coded status indicators and formatted tables. *(done 2026-03-13)*
+- [x] **Repository autocompletion:** Typer callback that completes `--repo` values from the registry. *(done 2026-03-13)*
 
 ---
 

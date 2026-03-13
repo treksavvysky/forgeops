@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ForgeOps is a cross-repo work ledger for AI-assisted software development. It tracks issues, tasks, assignments, and progress so that work remains organized, reviewable, and resumable across sessions and repositories. See `docs/PURPOSE.md` for scope boundaries and `docs/VISION.md` for long-term direction.
 
-The current codebase is a Python CLI issue tracker with SQLite storage and a FastAPI REST API — the foundation that the roadmap builds on. See `docs/ARCHITECTURE.md` for the full current architecture, target data model, and state engine design.
+The codebase is a Python CLI + REST API backed by SQLite via SQLModel. Phase 1 (Unified Foundation) is complete — all data lives in a single SQLite database with Pydantic/SQLModel models. See `docs/ARCHITECTURE.md` for full architecture and `docs/ROADMAP.md` for the build plan.
 
 ## Commands
 
@@ -14,19 +14,26 @@ The current codebase is a Python CLI issue tracker with SQLite storage and a Fas
 ```bash
 uv run python main.py <command>
 ```
-Available commands: `create-issue`, `list-issues`, `list-issues --repo <name>`, `view-issue <ISSUE-ID>`, `list-repos`, `add-repo <repo-name>`, `migrate-issues`. Run `uv run python main.py --help` for full help.
+Available commands: `create-issue`, `list-issues`, `view-issue`, `list-repos`, `add-repo`, `update-repo`, `remove-repo`, `migrate-issues`. Run `uv run python main.py --help` for full help.
+
+Key options:
+- `list-issues --repo <name> --state <state> --blocked`
+- `add-repo <name> --org <org> --branch <branch> --url <url> --description <desc>`
+- `update-repo <name> --org <org> --branch <branch> --status active|archived --url <url> --description <desc>`
+- `list-repos --all` (includes archived)
+- `view-issue WI-<n>` or `view-issue <n>`
 
 ### Running the API
 ```bash
 uv run uvicorn api:app --reload
 ```
-Serves at `http://localhost:8000`. Endpoints: `GET /issues`, docs at `/docs`. No authentication.
+Serves at `http://localhost:8000`. Endpoints: `GET /issues`, `GET /repositories`, docs at `/docs`. No authentication.
 
 ### Running Tests
 ```bash
 uv run python -m pytest tests/ -v
 # Single test:
-uv run python -m pytest tests/test_task_manager.py::TestTaskManager::test_add_task -v
+uv run python -m pytest tests/test_database.py::TestDatabaseLayer::test_create_and_get_work_item -v
 ```
 Tests use `unittest.TestCase` style. Install test deps with `uv sync --extra test`.
 
@@ -35,15 +42,24 @@ Managed with `uv` (lock file: `uv.lock`). Python 3.13+ required.
 ```bash
 uv sync
 ```
+Runtime: FastAPI, SQLModel (includes SQLAlchemy + Pydantic), Rich, Typer, uvicorn.
 
 ## Architecture
 
+**Key files:**
+- `models.py` — SQLModel/Pydantic models for all 5 core objects (Repository, WorkItem, Assignment, ExecutionRecord, Review) plus enums
+- `config.py` — Centralized configuration with env var support (`FORGEOPS_DB_PATH`, `FORGEOPS_BASE_DIR`)
+- `core/database.py` — SQLModel data access layer (single source of truth)
+- `core/repository_manager.py` — Repository validation and management
+- `commands/` — CLI command handlers (one per file)
+- `api.py` — FastAPI REST endpoints
+
+**Data flows through SQLite only.** No JSON files. The `migrate-issues` command imports legacy JSON data into the new schema.
+
 See `docs/ARCHITECTURE.md` for the complete architecture document including:
-- Current three-layer design (commands → core → utils)
-- Dual storage model (JSON files + SQLite) and its limitations
-- Target data model (five core objects: Repository, Work Item, Assignment, Execution Record, Review)
+- Target data model (five core objects)
 - State engine (8-state lifecycle, block mechanism, repo concurrency guard)
-- Roadmap mapping (what exists today vs. what each phase changes)
+- Roadmap mapping
 
 ## Development Workflow
 
@@ -56,3 +72,4 @@ See `docs/ARCHITECTURE.md` for the complete architecture document including:
 
 - The project name in `pyproject.toml` is still `jules-dev-kit` (the original name before rename to ForgeOps).
 - No CI/CD, linter, or formatter configured. The roadmap plans ruff, mypy, and GitHub Actions.
+- Legacy files (`issues/`, `repos.json`, `issue_counter.txt`, `task_lists/`) still exist on disk but are no longer read by any code path except the migration command.

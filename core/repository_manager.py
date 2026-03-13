@@ -1,88 +1,57 @@
-"""
-Repository Manager - Handles repository validation and management
-"""
+"""Repository Manager - Handles repository validation and management via SQLModel."""
 
-import json
 import re
-from pathlib import Path
 
-from core.db import Database
+from core.database import (
+    add_repository,
+    get_repositories,
+    get_repository,
+    remove_repository,
+    update_repository,
+)
+from models import RepoStatus
 
 
 class RepositoryManager:
-    def __init__(self, repos_file: str = "repos.json", db: Database = None):
-        self.repos_file = Path(repos_file)
-        self.db = db or Database()
-        self._init_repos_registry()
-    
-    def _init_repos_registry(self):
-        """Initialize the repositories registry with some default repos."""
-        if not self.repos_file.exists():
-            default_repos = [
-                "jules-dev-kit",
-                "my-app",
-                "backend-api",
-                "frontend-web",
-                "mobile-app"
-            ]
-            with open(self.repos_file, 'w') as f:
-                json.dump({"repositories": default_repos}, f, indent=2)
+    def __init__(self, engine):
+        self.engine = engine
 
-            for repo in default_repos:
-                self.db.add_repository(repo)
-    
-    def load_repositories(self):
-        """Load the list of known repositories from the JSON registry."""
-        try:
-            with open(self.repos_file, 'r') as f:
-                data = json.load(f)
-                return data.get("repositories", [])
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Error loading repositories: {e}")
-            return []
-    
-    def validate_repo_name(self, repo_name):
-        """Validate repository name against naming conventions."""
-        # Check for basic naming conventions (letters, numbers, hyphens, underscores)
+    def validate_repo_name(self, repo_name: str) -> tuple[bool, str]:
         if not re.match(r'^[a-zA-Z0-9_-]+$', repo_name):
             return False, "Repository name can only contain letters, numbers, hyphens, and underscores"
-        
-        # Check length
         if len(repo_name) < 2:
             return False, "Repository name must be at least 2 characters long"
-        
         if len(repo_name) > 50:
             return False, "Repository name must be 50 characters or less"
-        
         return True, ""
-    
-    def suggest_repositories(self, user_input):
-        """Suggest similar repository names if user input doesn't match exactly."""
+
+    def load_repositories(self, *, include_archived: bool = False) -> list[str]:
+        repos = get_repositories(self.engine, include_archived=include_archived)
+        return [r.name for r in repos]
+
+    def suggest_repositories(self, user_input: str) -> tuple[bool, list[str]]:
         repos = self.load_repositories()
-        suggestions = []
-        
         user_lower = user_input.lower()
-        
+        suggestions = []
         for repo in repos:
-            # Exact match
             if repo.lower() == user_lower:
                 return True, []
-            
-            # Partial match or similar
             if user_lower in repo.lower() or repo.lower() in user_lower:
                 suggestions.append(repo)
-        
         return False, suggestions
-    
-    def add_repository(self, repo_name):
-        """Add a new repository to the registry."""
-        repos = self.load_repositories()
-        if repo_name not in repos:
-            repos.append(repo_name)
-            repos.sort()  # Keep them sorted
 
-            with open(self.repos_file, 'w') as f:
-                json.dump({"repositories": repos}, f, indent=2)
-            self.db.add_repository(repo_name)
-            return True
-        return False
+    def add_repository(self, repo_name: str, **kwargs) -> bool:
+        existing = get_repository(self.engine, repo_name)
+        if existing:
+            return False
+        add_repository(self.engine, repo_name, **kwargs)
+        return True
+
+    def update_repository(self, repo_name: str, **kwargs):
+        return update_repository(self.engine, repo_name, **kwargs)
+
+    def remove_repository(self, repo_name: str) -> bool:
+        return remove_repository(self.engine, repo_name)
+
+    def get_repository(self, repo_name: str):
+        return get_repository(self.engine, repo_name)

@@ -1,34 +1,46 @@
-"""
-List Repositories Command - Display all repositories in the registry
-"""
+"""List Repositories Command - Display all repositories with Rich formatting."""
 
-from core.repository_manager import RepositoryManager
+from rich.console import Console
+from rich.table import Table
+
+from core.database import create_db_and_tables, get_repositories
+
+console = Console()
 
 
-def list_repos():
-    """List all repositories in the registry."""
-    repo_manager = RepositoryManager()
-    
-    try:
-        repos = repo_manager.load_repositories()
-    except Exception as e:
-        print(f"Error loading repositories: {e}")
-        return
-    
+def list_repos(include_archived: bool = False) -> None:
+    engine = create_db_and_tables()
+    repos = get_repositories(engine, include_archived=include_archived)
+
     if not repos:
-        print("No repositories found in registry.")
-        print("Use 'python main.py add-repo <name>' to add repositories.")
+        console.print("No repositories found.")
+        console.print("Use [bold]add-repo <name>[/bold] to add one.")
         return
-    
-    # Display header
-    print("\n" + "="*50)
-    print("REGISTERED REPOSITORIES")
-    print("="*50)
-    
-    # Display repositories
+
+    title = "Repositories"
+    if include_archived:
+        title += " (including archived)"
+
+    table = Table(title=title, show_lines=False)
+    table.add_column("#", style="dim", no_wrap=True)
+    table.add_column("Name", style="bold cyan")
+    table.add_column("Org")
+    table.add_column("Branch")
+    table.add_column("Status", no_wrap=True)
+    table.add_column("URL")
+    table.add_column("Description")
+
     for i, repo in enumerate(repos, 1):
-        print(f"{i:2d}. {repo}")
-    
-    print("="*50)
-    print(f"Total: {len(repos)} repository(ies)")
-    print("\nUse 'python main.py add-repo <name>' to add more repositories.")
+        status_style = "green" if repo.status.value == "active" else "dim"
+        table.add_row(
+            str(i),
+            repo.name,
+            repo.org or "—",
+            repo.default_branch or "—",
+            f"[{status_style}]{repo.status.value}[/{status_style}]",
+            repo.url or "—",
+            repo.description or "—",
+        )
+
+    console.print(table)
+    console.print(f"\nTotal: {len(repos)} repository(ies)")

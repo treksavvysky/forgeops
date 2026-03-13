@@ -14,155 +14,155 @@ See [PURPOSE.md](PURPOSE.md) for full scope boundaries. See [ROADMAP.md](ROADMAP
 
 ## Current Architecture
 
+*Updated after Phase 1 completion (2026-03-13).*
+
 ### Three-Layer Design
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Interfaces                                     │
-│  ┌──────────────┐  ┌────────────────────────┐   │
-│  │  CLI (Typer)  │  │  REST API (FastAPI)    │   │
-│  │  main.py      │  │  api.py                │   │
-│  └──────┬───────┘  └───────────┬────────────┘   │
-├─────────┼──────────────────────┼────────────────┤
-│  Commands / Handlers           │                 │
-│  ┌──────┴───────┐              │                 │
-│  │  commands/    │              │                 │
-│  │  create_issue │              │                 │
-│  │  list_issues  │              │                 │
-│  │  view_issue   │              │                 │
-│  │  list_repos   │              │                 │
-│  │  add_repo     │              │                 │
-│  │  migrate_issues│             │                 │
-│  └──────┬───────┘              │                 │
-├─────────┼──────────────────────┼────────────────┤
-│  Core Business Logic           │                 │
-│  ┌─────────────────────────────┴──────────────┐ │
-│  │  IssueTracker    — creation orchestration   │ │
-│  │  FileManager     — JSON file I/O, ID gen    │ │
-│  │  RepositoryManager — repo registry + valid. │ │
-│  │  TaskManager     — task lists (standalone)  │ │
-│  │  Database        — SQLite wrapper           │ │
-│  └─────────────────────────────────────────────┘ │
-│  ┌─────────────────────────────────────────────┐ │
-│  │  utils/                                      │ │
-│  │  InputValidator — interactive input + valid. │ │
-│  │  helpers        — format_datetime, truncate  │ │
-│  └─────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  Interfaces                                          │
+│  ┌──────────────┐  ┌────────────────────────┐        │
+│  │  CLI (Typer)  │  │  REST API (FastAPI)    │        │
+│  │  main.py      │  │  api.py                │        │
+│  └──────┬───────┘  └───────────┬────────────┘        │
+├─────────┼──────────────────────┼─────────────────────┤
+│  Commands / Handlers           │                      │
+│  ┌──────┴───────┐              │                      │
+│  │  commands/    │              │                      │
+│  │  create_issue │              │                      │
+│  │  list_issues  │              │                      │
+│  │  view_issue   │              │                      │
+│  │  list_repos   │              │                      │
+│  │  add_repo     │              │                      │
+│  │  update_repo  │              │                      │
+│  │  remove_repo  │              │                      │
+│  │  migrate_issues│             │                      │
+│  └──────┬───────┘              │                      │
+├─────────┼──────────────────────┼─────────────────────┤
+│  Core                          │                      │
+│  ┌─────────────────────────────┴───────────────────┐ │
+│  │  database.py        — SQLModel data access layer │ │
+│  │  repository_manager — repo validation + CRUD     │ │
+│  └──────────────────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │  models.py  — SQLModel models + Pydantic enums   │ │
+│  │  config.py  — Centralized config (env vars)      │ │
+│  └──────────────────────────────────────────────────┘ │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │  utils/                                           │ │
+│  │  InputValidator — interactive input + validation  │ │
+│  │  helpers        — format_datetime, truncate       │ │
+│  └──────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────┘
 ```
 
 ### Storage Model
 
-ForgeOps currently uses **dual storage** — JSON files and SQLite — that are **not automatically synchronized**.
+ForgeOps uses a **single SQLite database** as the sole source of truth. Both CLI and API read/write the same database through the SQLModel data access layer.
 
 ```
-                    CLI writes here              API reads here
-                         │                            │
-                         ▼                            ▼
-              ┌──────────────────┐         ┌──────────────────┐
-              │  issues/*.json   │ ──────► │   forgeops.db    │
-              │  issue_counter   │ migrate │   (SQLite)       │
-              │  repos.json      │ ──────► │                  │
-              └──────────────────┘         └──────────────────┘
+              CLI                    API
+               │                      │
+               ▼                      ▼
+        ┌─────────────────────────────────┐
+        │  core/database.py (SQLModel)    │
+        │         ↕                       │
+        │  forgeops.db (SQLite)           │
+        │  ┌────────────────────────────┐ │
+        │  │  repositories              │ │
+        │  │  work_items                │ │
+        │  │  assignments (Phase 2)     │ │
+        │  │  execution_records (Ph. 2) │ │
+        │  │  reviews (Phase 2)         │ │
+        │  └────────────────────────────┘ │
+        └─────────────────────────────────┘
 ```
 
-| Storage | Used by | Source of truth for |
-|---------|---------|---------------------|
-| `issues/ISSUE-NNN.json` | CLI (read/write) | Issue content |
-| `issue_counter.txt` | FileManager | Next issue ID |
-| `repos.json` | RepositoryManager | Repository names |
-| `forgeops.db` | API (read), migration (write) | Nothing — populated by `migrate-issues` |
-| `task_lists/*.json` | TaskManager | Task lists (separate system) |
-
-**Key limitation:** Creating an issue via CLI writes to JSON but the API won't see it until `migrate-issues` is run. The ROADMAP Phase 1 eliminates this by moving to SQLite as the single source of truth.
+Legacy JSON files (`issues/`, `repos.json`, `issue_counter.txt`, `task_lists/`) still exist on disk but are only read by the `migrate-issues` command.
 
 ### Data Schemas
 
-**Issue (JSON file)**
-```json
-{
-  "id": "ISSUE-001",
-  "title": "string",
-  "description": "string",
-  "repository": "string",
-  "created_at": "ISO 8601 timestamp"
-}
-```
+All models defined in `models.py` using SQLModel (Pydantic + SQLAlchemy).
 
-**SQLite — `repositories` table**
+**`repositories` table**
 | Column | Type | Constraints |
 |--------|------|-------------|
-| id | INTEGER | PRIMARY KEY AUTOINCREMENT |
-| name | TEXT | UNIQUE NOT NULL |
+| repo_id | INTEGER | PRIMARY KEY |
+| name | TEXT | UNIQUE, indexed |
+| org | TEXT | nullable |
+| default_branch | TEXT | nullable |
+| status | TEXT | "active" / "archived", default "active" |
+| url | TEXT | nullable |
+| description | TEXT | nullable |
 
-**SQLite — `issues` table**
+**`work_items` table**
 | Column | Type | Constraints |
 |--------|------|-------------|
-| id | TEXT | PRIMARY KEY |
+| task_id | INTEGER | PRIMARY KEY |
+| repo_id | INTEGER | FK → repositories.repo_id, indexed |
 | title | TEXT | NOT NULL |
 | description | TEXT | nullable |
-| repository | TEXT | NOT NULL, FK → repositories.name |
-| created_at | TEXT | NOT NULL |
+| state | TEXT | enum (8 states), default "queued", indexed |
+| priority | TEXT | enum (low/medium/high/urgent), default "medium" |
+| is_blocked | BOOLEAN | default false |
+| blocked_reason | TEXT | nullable |
+| parent_id | INTEGER | FK → work_items.task_id (self-referential) |
+| created_by | TEXT | nullable |
+| created_at | DATETIME | auto-set |
+| updated_at | DATETIME | auto-updated |
 
-**Task list (JSON file)**
-```json
-{
-  "version": "1.0.0",
-  "name": "list_name",
-  "association": "project-name",
-  "created_by": "username",
-  "created_on": "ISO 8601",
-  "tasks": [
-    {
-      "task_id": "UUID",
-      "subject": "string",
-      "description": "string",
-      "status": "open | in_progress | closed",
-      "priority": "low | medium | high",
-      "date_created": "ISO 8601",
-      "comments": [{ "comment": "string", "timestamp": "ISO 8601" }]
-    }
-  ]
-}
-```
+**`assignments` table** (schema defined, populated in Phase 2)
+| Column | Type | Constraints |
+|--------|------|-------------|
+| assignment_id | INTEGER | PRIMARY KEY |
+| task_id | INTEGER | FK → work_items.task_id |
+| executor | TEXT | NOT NULL |
+| executor_type | TEXT | "human" / "agent" |
+| assigned_at | DATETIME | auto-set |
+
+**`execution_records` table** (schema defined, populated in Phase 2)
+| Column | Type | Constraints |
+|--------|------|-------------|
+| run_id | INTEGER | PRIMARY KEY |
+| task_id | INTEGER | FK → work_items.task_id |
+| executor | TEXT | NOT NULL |
+| branch | TEXT | nullable |
+| commit | TEXT | nullable |
+| status | TEXT | "success" / "failed" / "partial" |
+| logs_ref | TEXT | nullable |
+| artifact_ref | TEXT | nullable |
+| created_at | DATETIME | auto-set |
+
+**`reviews` table** (schema defined, populated in Phase 2)
+| Column | Type | Constraints |
+|--------|------|-------------|
+| review_id | INTEGER | PRIMARY KEY |
+| task_id | INTEGER | FK → work_items.task_id |
+| reviewer | TEXT | NOT NULL |
+| decision | TEXT | "accepted" / "rework_required" |
+| note | TEXT | nullable |
+| created_at | DATETIME | auto-set |
 
 ### Data Flow
 
-**Create issue** (the most complex flow):
+**Create work item** (interactive):
 ```
 User → CLI prompt
   → InputValidator (title, repo, description)
   → RepositoryManager.validate_repo_name()
   → RepositoryManager.suggest_repositories() (on mismatch)
-  → IssueTracker.confirm_repository() (interactive)
-  → FileManager.get_next_issue_id() (reads/increments issue_counter.txt)
-  → IssueTracker.display_issue_preview()
+  → _confirm_repository() (interactive)
+  → Preview (Rich Panel)
   → User confirms
-  → FileManager.save_issue() (writes issues/ISSUE-NNN.json)
-  → Database.add_issue() (upserts to SQLite)
-  → Database.add_repository() (upserts to SQLite)
+  → database.add_repository() (ensure repo exists)
+  → database.create_work_item() (writes to SQLite)
 ```
 
-**List/view issues**: FileManager reads from `issues/*.json`. No SQLite involved.
+**List/view work items**: `database.list_work_items()` / `database.get_work_item()` — reads from SQLite with eager-loaded relationships.
 
-**API**: Database reads from SQLite. No JSON files involved.
+**API**: Same `database.*` functions, same SQLite. CLI and API always see the same data.
 
-**Migration**: FileManager reads all JSON → Database writes to SQLite. One-way, re-runnable (upserts).
-
-### Two Disconnected Systems
-
-Issues and tasks are **separate and unlinked**:
-
-| Aspect | Issues | Tasks |
-|--------|--------|-------|
-| Storage | `issues/*.json` + SQLite | `task_lists/*.json` |
-| ID format | `ISSUE-NNN` (sequential) | UUID |
-| CLI access | Yes (6 commands) | None |
-| API access | Yes (`GET /issues`) | None |
-| Metadata | title, description, repo, created_at | subject, description, priority, status, comments |
-| Manager | IssueTracker + FileManager | TaskManager |
-
-The ROADMAP Phase 1 unifies these into a single `work_items` table.
+**Migration**: `migrate-issues` reads legacy JSON files and calls `database.create_work_item()` for each.
 
 ---
 
@@ -170,18 +170,17 @@ The ROADMAP Phase 1 unifies these into a single `work_items` table.
 
 ```
 main.py
-  ├── commands/create_issue  → core/issue_tracker → db, repository_manager,
-  │                                                  file_manager, validators
-  ├── commands/list_issues   → core/file_manager, utils/helpers
-  ├── commands/view_issue    → core/file_manager, utils/helpers
-  ├── commands/list_repos    → core/repository_manager
-  ├── commands/add_repo      → core/repository_manager
-  └── commands/migrate_issues → core/file_manager, core/db
+  ├── commands/create_issue  → core/database, core/repository_manager, utils/validators
+  ├── commands/list_issues   → core/database, models
+  ├── commands/view_issue    → core/database
+  ├── commands/list_repos    → core/database
+  ├── commands/add_repo      → core/database, core/repository_manager
+  ├── commands/update_repo   → core/database, core/repository_manager
+  ├── commands/remove_repo   → core/database, core/repository_manager
+  └── commands/migrate_issues → core/database, config
 
-api.py → core/db
+api.py → core/database, models
 ```
-
-TaskManager has **no callers** in the current codebase — it exists as library code only.
 
 ---
 
@@ -189,46 +188,47 @@ TaskManager has **no callers** in the current codebase — it exists as library 
 
 ### CLI (`main.py`)
 
-Typer-based with 6 commands. Interactive input via `InputValidator`. No batch/scriptable mode for `create-issue`.
+Typer-based with 8 commands. Rich output for tables and panels. Interactive input via `InputValidator`. Repository autocompletion on `--repo`.
 
-| Command | Args/Options | Reads from | Writes to |
-|---------|-------------|------------|-----------|
-| `create-issue` | (interactive) | repos.json, issue_counter.txt | issues/*.json, forgeops.db |
-| `list-issues` | `--repo <name>` | issues/*.json | — |
-| `view-issue` | `<ISSUE-ID>` | issues/*.json | — |
-| `list-repos` | — | repos.json | — |
-| `add-repo` | `<repo-name>` | repos.json | repos.json, forgeops.db |
-| `migrate-issues` | — | issues/*.json | forgeops.db |
+| Command | Args/Options | Storage |
+|---------|-------------|---------|
+| `create-issue` | `--priority`, `--created-by` (interactive) | writes `forgeops.db` |
+| `list-issues` | `--repo`, `--state`, `--blocked` | reads `forgeops.db` |
+| `view-issue` | `WI-<n>` or `<n>` | reads `forgeops.db` |
+| `list-repos` | `--all` (includes archived) | reads `forgeops.db` |
+| `add-repo` | `<name>`, `--org`, `--branch`, `--url`, `--description` | writes `forgeops.db` |
+| `update-repo` | `<name>`, `--org`, `--branch`, `--status`, `--url`, `--description` | writes `forgeops.db` |
+| `remove-repo` | `<name>` | writes `forgeops.db` |
+| `migrate-issues` | — | reads legacy JSON, writes `forgeops.db` |
 
 ### REST API (`api.py`)
 
-Single endpoint. No authentication. Reads from SQLite only.
+Two endpoints. No authentication. Reads/writes through `core/database.py`.
 
 | Endpoint | Method | Response |
 |----------|--------|----------|
-| `/issues` | GET | `List[Dict]` — all issues from SQLite |
+| `/issues` | GET | Work items (filterable by `repo`, `state`) |
+| `/repositories` | GET | Repository list (filterable by `include_archived`) |
 | `/docs` | GET | Auto-generated OpenAPI docs |
 
 ---
 
 ## Dependencies
 
-**Runtime:** Python 3.13+, FastAPI, Typer, uvicorn
+**Runtime:** Python 3.13+, FastAPI, SQLModel (SQLAlchemy + Pydantic), Rich, Typer, uvicorn
 **Test:** pytest, datetime-truncate
 **Package manager:** uv
 
-No ORM, no migrations framework, no linter/formatter configured. All database access is raw `sqlite3`.
-
 ---
 
-## Target Data Model
+## Data Model
 
-Five core objects make up the work ledger. See ROADMAP.md for full field definitions.
+Five core objects, all defined as SQLModel tables in `models.py`. The data model diagram below reflects the implemented schema:
 
 ```
 ┌──────────────┐       ┌──────────────────┐       ┌──────────────┐
 │  Repository  │◄──FK──│    Work Item      │──FK──►│  Assignment  │
-│              │       │  (issue / task)   │       │              │
+│              │       │  (unified)        │       │              │
 │  repo_id     │       │  task_id          │       │  assignment_id│
 │  name        │       │  repo_id (FK)     │       │  task_id (FK)│
 │  org         │       │  title            │       │  executor    │
@@ -257,6 +257,8 @@ Five core objects make up the work ledger. See ROADMAP.md for full field definit
                        └──────────────┘
 ```
 
+All five tables exist in the database. Repository and WorkItem are actively used. Assignment, ExecutionRecord, and Review tables are created but will be populated by Phase 2 commands.
+
 ### State Engine
 
 ForgeOps owns the state machine. The lifecycle is agent-aware — not generic project management.
@@ -277,29 +279,26 @@ queued → assigned → executing → completed → awaiting_review → accepted
 
 ## Mapping to Roadmap
 
-### What exists today
+### What exists today (after Phase 1)
 
 | Target object | Current state | Where in code |
 |---------------|---------------|---------------|
-| Repository | Name registry, format validation, suggestions. No org, branch, status, url, description. | `RepositoryManager`, `repos.json` |
-| Work Item | Two disconnected systems. Issues: JSON files + SQLite mirror, no state field. Tasks: JSON files, free-text status, no CLI. | `IssueTracker`, `FileManager`, `Database`, `TaskManager` |
-| Assignment | Not implemented | — |
-| Execution Record | Not implemented | — |
-| Review | Not implemented | — |
-| State Engine | No lifecycle states. Tasks have free-text status; issues have none. | — |
+| Repository | Full metadata (name, org, branch, status, url, description). CRUD via CLI + API. Active/archived filtering. | `models.Repository`, `core/database.py`, `core/repository_manager.py` |
+| Work Item | Unified `work_items` table. State and priority fields present but no transition validation yet. | `models.WorkItem`, `core/database.py` |
+| Assignment | Table exists in DB schema, model defined. No CLI/API commands yet. | `models.Assignment` |
+| Execution Record | Table exists in DB schema, model defined. No CLI/API commands yet. | `models.ExecutionRecord` |
+| Review | Table exists in DB schema, model defined. No CLI/API commands yet. | `models.Review` |
+| State Engine | States defined as enum. No transition validation, no concurrency guard. | `models.WorkItemState` |
 | Session Continuity | Not implemented. No `status`, `snapshot`, `resume`, or `next` commands. | — |
 
-### Phase 1 changes to this architecture
+### Phase 1 (complete)
 
-The most significant architectural change is **retiring dual storage**. After Phase 1:
-
-- `issues/*.json`, `issue_counter.txt`, `repos.json`, `task_lists/*.json` are replaced by SQLite via SQLModel
-- `FileManager` and `TaskManager` are retired
-- Issues and tasks merge into a single `work_items` table with Pydantic validation
-- Repositories gain full metadata: `org`, `default_branch`, `status` (active/archived), `url`, `description`
-- Pydantic models defined for all five core objects (`WorkItem`, `Repository`, `Assignment`, `ExecutionRecord`, `Review`)
-- All interfaces (CLI, API) read/write through the same data layer
-- Hardcoded paths move to `config.py` with environment variable support
+- Dual storage retired: SQLite via SQLModel is the single source of truth
+- `FileManager`, `TaskManager`, `IssueTracker`, old `Database` retired
+- Issues and tasks unified into `work_items` table
+- All five core models defined with Pydantic validation
+- Rich CLI output, repository autocompletion
+- `config.py` with environment variable support
 
 ### Phase 2 additions to this architecture
 

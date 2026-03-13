@@ -1,59 +1,68 @@
-"""
-View Issue Command - Display detailed view of a specific issue
-"""
+"""View Issue Command - Display detailed view of a specific work item."""
 
-import re
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
-from core.file_manager import FileManager
-from utils.helpers import format_datetime
+from core.database import create_db_and_tables, get_work_item, list_work_items
+
+console = Console()
 
 
-def view_issue(issue_id):
-    """Display detailed view of a specific issue."""
-    file_manager = FileManager()
-    
-    # Validate issue ID format
-    if not re.match(r'^ISSUE-\d{3}$', issue_id):
-        print(f"Invalid issue ID format: {issue_id}")
-        print("Expected format: ISSUE-XXX (e.g., ISSUE-001)")
+def view_issue(issue_id: str) -> None:
+    engine = create_db_and_tables()
+
+    # Accept both "WI-<n>" and plain integer
+    task_id = _parse_id(issue_id)
+    if task_id is None:
+        console.print(f"[red]Invalid work item ID: {issue_id}[/red]")
+        console.print("Expected format: WI-<number> (e.g. WI-1) or a plain number.")
         return
-    
-    try:
-        issue = file_manager.load_issue(issue_id)
-    except Exception as e:
-        print(f"Error loading issue: {e}")
+
+    item = get_work_item(engine, task_id)
+    if not item:
+        console.print(f"[red]Work item {issue_id} not found.[/red]")
+        _suggest_recent(engine)
         return
-    
-    if not issue:
-        print(f"Issue {issue_id} not found.")
-        
-        # Suggest similar issue IDs
-        try:
-            all_issues = file_manager.load_all_issues()
-            if all_issues:
-                print(f"\nAvailable issues:")
-                for issue_item in all_issues[-5:]:  # Show last 5 issues
-                    print(f"  {issue_item['id']}")
-        except Exception:
-            pass  # Don't let suggestion errors break the command
-        return
-    
-    # Display detailed issue information
-    print("\n" + "="*60)
-    print(f"ISSUE DETAILS: {issue['id']}")
-    print("="*60)
-    
-    print(f"Title:       {issue['title']}")
-    print(f"Repository:  {issue['repository']}")
-    print(f"Created:     {format_datetime(issue.get('created_at'))}")
-    print(f"Description:")
-    
-    description = issue.get('description', '')
-    if description:
-        # Format description with proper indentation
-        for line in description.split('\n'):
-            print(f"  {line}")
+
+    tbl = Table(show_header=False, box=None, padding=(0, 2))
+    tbl.add_column(style="bold cyan", min_width=14)
+    tbl.add_column()
+    tbl.add_row("ID", f"WI-{item.task_id}")
+    tbl.add_row("Title", item.title)
+    tbl.add_row("Repository", item.repository.name if item.repository else "—")
+    tbl.add_row("State", item.state.value)
+    tbl.add_row("Priority", item.priority.value)
+    tbl.add_row("Blocked", f"Yes — {item.blocked_reason}" if item.is_blocked else "No")
+    if item.created_by:
+        tbl.add_row("Created by", item.created_by)
+    tbl.add_row("Created", str(item.created_at))
+    tbl.add_row("Updated", str(item.updated_at))
+
+    if item.description:
+        tbl.add_row("Description", item.description)
     else:
-        print("  (No description provided)")
-    
-    print("="*60)
+        tbl.add_row("Description", "[dim](none)[/dim]")
+
+    console.print(Panel(tbl, title=f"[bold]WI-{item.task_id}[/bold]"))
+
+
+def _parse_id(raw: str) -> int | None:
+    raw = raw.strip()
+    if raw.upper().startswith("WI-"):
+        raw = raw[3:]
+    # Also accept legacy ISSUE-NNN format
+    if raw.upper().startswith("ISSUE-"):
+        raw = raw[6:]
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _suggest_recent(engine) -> None:
+    items = list_work_items(engine)
+    if items:
+        console.print("\nRecent work items:")
+        for item in items[-5:]:
+            console.print(f"  WI-{item.task_id}  {item.title}")

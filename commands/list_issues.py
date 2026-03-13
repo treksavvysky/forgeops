@@ -1,60 +1,96 @@
-"""
-List Issues Command - Display all issues or filter by repository
-"""
+"""List Issues Command - Display work items with Rich formatting."""
 
-from datetime import datetime
+from typing import Optional
 
-from core.file_manager import FileManager
-from utils.helpers import truncate_text, format_datetime
+from rich.console import Console
+from rich.table import Table
+
+from core.database import create_db_and_tables, list_work_items
+from models import WorkItemState
+
+console = Console()
 
 
-def list_issues(repo_filter=None):
-    """List all issues, optionally filtered by repository."""
-    file_manager = FileManager()
-    
-    try:
-        issues = file_manager.load_all_issues()
-    except Exception as e:
-        print(f"Error loading issues: {e}")
-        return
-    
-    if not issues:
-        print("No issues found.")
-        return
-    
-    # Filter by repository if specified
-    if repo_filter:
-        issues = [issue for issue in issues if issue['repository'].lower() == repo_filter.lower()]
-        if not issues:
-            print(f"No issues found for repository '{repo_filter}'.")
-            return
-    
-    # Display header
-    print("\n" + "="*80)
-    if repo_filter:
-        print(f"ISSUES FOR REPOSITORY: {repo_filter}")
-    else:
-        print("ALL ISSUES")
-    print("="*80)
-    
-    # Display issues in a table format
-    for issue in issues:
-        # Truncate title and description for table display
-        title = truncate_text(issue['title'], 50)
-        description = issue.get('description', '')
-        desc_preview = truncate_text(description, 30)
-        
-        # Format created date
+def list_issues(
+    repo_filter: Optional[str] = None,
+    state_filter: Optional[str] = None,
+    show_blocked: Optional[bool] = None,
+) -> None:
+    engine = create_db_and_tables()
+
+    state = None
+    if state_filter:
         try:
-            created_date = datetime.fromisoformat(issue['created_at'].replace('Z', '+00:00'))
-            date_str = created_date.strftime('%Y-%m-%d %H:%M')
-        except (ValueError, KeyError):
-            date_str = "Unknown"
-        
-        print(f"{issue['id']:<12} | {issue['repository']:<20} | {date_str:<16} | {title}")
-        if desc_preview:
-            print(f"{'':12} | {'':20} | {'':16} | └─ {desc_preview}")
-        print("-" * 80)
-    
-    print(f"\nTotal: {len(issues)} issue(s)")
-    print("\nUse 'python main.py view-issue <ISSUE-ID>' to see full details.")
+            state = WorkItemState(state_filter)
+        except ValueError:
+            console.print(f"[red]Unknown state: {state_filter}[/red]")
+            return
+
+    items = list_work_items(
+        engine,
+        repo_name=repo_filter,
+        state=state,
+        is_blocked=show_blocked,
+    )
+
+    if not items:
+        label = ""
+        if repo_filter:
+            label += f" for repository '{repo_filter}'"
+        if state_filter:
+            label += f" in state '{state_filter}'"
+        console.print(f"No work items found{label}.")
+        return
+
+    title = "Work Items"
+    if repo_filter:
+        title += f" — {repo_filter}"
+
+    table = Table(title=title, show_lines=False)
+    table.add_column("ID", style="bold cyan", no_wrap=True)
+    table.add_column("Repository", style="magenta")
+    table.add_column("State", no_wrap=True)
+    table.add_column("Priority", no_wrap=True)
+    table.add_column("Title")
+
+    state_styles = {
+        WorkItemState.queued: "dim",
+        WorkItemState.assigned: "blue",
+        WorkItemState.executing: "bold yellow",
+        WorkItemState.completed: "green",
+        WorkItemState.awaiting_review: "bold magenta",
+        WorkItemState.accepted: "bold green",
+        WorkItemState.rework_required: "bold red",
+        WorkItemState.closed: "dim",
+    }
+
+    priority_styles = {
+        "low": "dim",
+        "medium": "",
+        "high": "bold yellow",
+        "urgent": "bold red",
+    }
+
+    for item in items:
+        item_id = f"WI-{item.task_id}"
+        repo_name = item.repository.name if item.repository else "—"
+        state_style = state_styles.get(item.state, "")
+        pri_style = priority_styles.get(item.priority.value, "")
+        blocked = " [red]BLOCKED[/red]" if item.is_blocked else ""
+        title_text = item.title
+        if len(title_text) > 60:
+            title_text = title_text[:57] + "..."
+
+        state_text = f"[{state_style}]{item.state.value}[/{state_style}]" if state_style else item.state.value
+        pri_text = f"[{pri_style}]{item.priority.value}[/{pri_style}]" if pri_style else item.priority.value
+
+        table.add_row(
+            item_id,
+            repo_name,
+            state_text,
+            pri_text,
+            title_text + blocked,
+        )
+
+    console.print(table)
+    console.print(f"\nTotal: {len(items)} work item(s)")
