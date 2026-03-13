@@ -67,6 +67,7 @@ See `docs/ARCHITECTURE.md` for the complete architecture document including:
 - **Commits:** Commit as you complete tasks and make progress through `docs/ROADMAP.md`. Each commit should be a meaningful unit of work with a clear message. Update the ROADMAP checkboxes when items are completed, including the date and commit hash.
 - **Roadmap:** `docs/ROADMAP.md` is the build plan. It defines the core data objects, state engine, and phased delivery. Refer to it before starting new work.
 - `create-issue` is interactive (prompts via `input()`) — it cannot be used non-interactively without modification.
+- **`.gitignore` hygiene:** Whenever you create, modify, or encounter a file or folder that is sensitive (credentials, secrets, `.env`, API keys, tokens), generated at runtime (databases, logs, caches, build artifacts), or produced by a script — **update `.gitignore` immediately** before committing. If a sensitive file is already tracked, remove it from tracking with `git rm --cached`. This is a security requirement, not optional.
 
 ## Notes
 
