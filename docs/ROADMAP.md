@@ -59,15 +59,15 @@ ForgeOps does not duplicate these systems. It is the ledger that records *what w
 
 ### Assignments
 
-- [ ] **Assignments table:** Separate `assignments` table (not a field on work items). Each assignment is a first-class record: `assignment_id`, `task_id` (FK), `executor`, `executor_type` (human | agent), `assigned_at`.
-- [ ] **Assignment CLI:** `assign <ID> <executor> --type human|agent`, `my-issues`, `agent-tasks <executor>`.
-- [ ] **Assignment history:** The assignments table is append-only — reassignment creates a new record, preserving full ownership history.
+- [x] **Assignments table:** Separate `assignments` table (not a field on work items). Each assignment is a first-class record: `assignment_id`, `task_id` (FK), `executor`, `executor_type` (human | agent), `assigned_at`. *(done 2026-03-13)*
+- [x] **Assignment CLI:** `assign <ID> <executor> --type human|agent`, `my-issues`, `agent-tasks <executor>`. *(done 2026-03-13)*
+- [x] **Assignment history:** The assignments table is append-only — reassignment creates a new record, preserving full ownership history. *(done 2026-03-13)*
 
 ### State Engine
 
 ForgeOps owns the state machine. The lifecycle reflects the AI-assisted workflow — not generic project management.
 
-- [ ] **Lifecycle states:** Eight states tracking where a work item is in the process:
+- [x] **Lifecycle states:** Eight states with transition validation via `core/state_engine.py`. *(done 2026-03-13)*
 
   ```
   queued → assigned → executing → completed → awaiting_review → accepted → closed
@@ -75,56 +75,45 @@ ForgeOps owns the state machine. The lifecycle reflects the AI-assisted workflow
                           └──────── rework_required ───────────────┘
   ```
 
-  | State | Meaning |
-  |-------|---------|
-  | `queued` | Created, not yet assigned to an executor |
-  | `assigned` | Executor (human or agent) designated |
-  | `executing` | Work actively in progress |
-  | `completed` | Execution finished, output produced |
-  | `awaiting_review` | Human reviewer needs to inspect |
-  | `accepted` | Review passed |
-  | `rework_required` | Review failed — needs another execution cycle |
-  | `closed` | Done, no further action |
-
-- [ ] **Block mechanism:** Blocking is orthogonal to lifecycle state. A work item carries `is_blocked` (bool) and `blocked_reason` (text). A task can be `queued and blocked`, `executing and blocked`, `awaiting_review and blocked`, etc. Blocking preserves the underlying state so unblocking resumes where it was.
-- [ ] **Block CLI:** `block <ID> --reason "waiting on API key"`, `unblock <ID>`. Blocked items surfaced in `next` command and filtered views.
-- [ ] **Repo concurrency guard:** Only one work item per repository may be in `executing` state at a time. Transition to `executing` is rejected if another item for the same `repo_id` is already executing. This prevents conflicting changes to the same repo by parallel agents.
-- [ ] **Parallel work:** State transitions are per-work-item with no global locks. An executor can have multiple assignments in different states concurrently across different repos. The rework loop does not block new work from being queued or assigned.
-- [ ] **Status commands:** `update-status <ID> --state <state>` with transition validation. Invalid transitions rejected with clear error.
-- [ ] **Filter by state:** `list-issues --state queued`, `list-issues --state awaiting_review`, `list-issues --blocked`.
-- [ ] **Priority levels:** `Low`, `Medium`, `High`, `Urgent` — filterable and sortable.
+- [x] **Block mechanism:** Orthogonal `is_blocked` + `blocked_reason` on any state. `block()` / `unblock()` in `core/database.py`. *(done 2026-03-13)*
+- [x] **Block CLI:** `block <ID> --reason "..."`, `unblock <ID>`. Blocked items surfaced in `next` and filtered views. *(done 2026-03-13)*
+- [x] **Repo concurrency guard:** `check_repo_concurrency()` in state engine rejects `executing` if another item for same repo is already executing. *(done 2026-03-13)*
+- [x] **Parallel work:** Per-work-item transitions, no global locks. Multiple assignments across repos concurrently. *(done 2026-03-13)*
+- [x] **Status commands:** `update-status <ID> --state <state>` with transition validation. Invalid transitions rejected with clear error. *(done 2026-03-13)*
+- [x] **Filter by state:** `list-issues --state queued`, `list-issues --state awaiting_review`, `list-issues --blocked`. *(done 2026-03-13)*
+- [x] **Priority levels:** `Low`, `Medium`, `High`, `Urgent` — filterable via `--priority`. *(done 2026-03-13)*
 
 ### Session Continuity
 
-- [ ] **Work snapshots:** Capture current state across all open work items — what's executing, what's blocked, what's awaiting review. CLI: `snapshot`, `resume` (shows snapshot from last session).
-- [ ] **Activity log:** Append-only record of state changes, comments, and assignments — so the operator can see what happened while they were away.
-- [ ] **Status overview:** `status` command — single view of where things stand. Items grouped by state, blocked items with reasons, repo concurrency (which repos have active execution), recent activity.
-- [ ] **Next-actions view:** `next` command that surfaces the highest-priority items needing human attention (items in `awaiting_review`, blocked items, stale assignments).
+- [x] **Work snapshots:** `snapshot` saves JSON, `resume` shows last session state. *(done 2026-03-13)*
+- [x] **Activity log:** Append-only `activity_log` table records all state changes, assignments, blocks, reviews, executions. *(done 2026-03-13)*
+- [x] **Status overview:** `status` command — items grouped by state, blocked items, executing repos, recent activity. *(done 2026-03-13)*
+- [x] **Next-actions view:** `next` command surfaces `awaiting_review`, blocked, and `rework_required` items sorted by priority. *(done 2026-03-13)*
 
 ### Execution Records
 
-- [ ] **Execution records table:** Separate `execution_records` table tracking what an agent or human actually did: `run_id`, `task_id` (FK), `executor`, `branch`, `commit`, `status` (success | failed | partial), `logs_ref`, `artifact_ref`, `created_at`.
-- [ ] **Execution CLI:** `log-run <TASK-ID> --branch <branch> --commit <sha> --status success`, `runs <TASK-ID>` (list all execution attempts).
-- [ ] **Review context:** The review queue draws from execution records — reviewer sees branch, commit, status, and linked artifacts for each run.
-- [ ] **Multiple attempts:** A single work item can have multiple execution records (failed attempts, retries, iterative changes).
+- [x] **Execution records table:** `execution_records` table with full CRUD in `core/database.py`. *(done 2026-03-13)*
+- [x] **Execution CLI:** `log-run` (with git auto-detect for branch/commit) and `runs <TASK-ID>`. *(done 2026-03-13)*
+- [x] **Review context:** `review-queue` shows last execution record (branch, commit, status) per item. *(done 2026-03-13)*
+- [x] **Multiple attempts:** Append-only — a work item can have multiple execution records. *(done 2026-03-13)*
 
 ### AI-Generated Code Review
 
-- [ ] **Review queue:** Work items in `awaiting_review` state represent AI-generated output awaiting human inspection. `review-queue` lists them with execution record context (branch, commit, what changed).
-- [ ] **Review workflow:** `start-review <ID>`, `approve <ID>`, `request-changes <ID> --note "..."`. Each review is a record: `review_id`, `task_id` (FK), `reviewer`, `decision`, `note`, `created_at`.
-- [ ] **Decision log:** The reviews table is append-only — full history of review decisions per work item.
+- [x] **Review queue:** `review-queue` lists `awaiting_review` items with last execution record context. *(done 2026-03-13)*
+- [x] **Review workflow:** `approve <ID>` and `request-changes <ID> --note "..."` with state transitions. *(done 2026-03-13)*
+- [x] **Decision log:** `reviews` table is append-only — full history of review decisions per work item. *(done 2026-03-13)*
 
 ### Artifacts & References
 
-- [ ] **Structured references:** Execution records carry `logs_ref` and `artifact_ref` pointers for run-specific outputs. Separate `attachments` table for general-purpose links (URLs, file paths, PR numbers) not tied to a specific run.
-- [ ] **CLI commands:** `attach <TASK-ID> <url-or-path>`, `list-attachments <TASK-ID>`.
-- [ ] **Git integration:** Auto-detect current repository and branch when creating issues or logging runs.
+- [x] **Structured references:** `logs_ref` and `artifact_ref` on execution records + `attachments` table for general-purpose links. *(done 2026-03-13)*
+- [x] **CLI commands:** `attach <TASK-ID> <url-or-path>`, `list-attachments <TASK-ID>`. *(done 2026-03-13)*
+- [x] **Git integration:** `log-run` auto-detects current branch and commit when not specified. *(done 2026-03-13)*
 
 ### Task Hierarchy
 
-- [ ] **Sub-tasks:** Work items can have a `parent_id` linking to another work item.
-- [ ] **Progress rollup:** Auto-calculate parent completion percentage from child statuses.
-- [ ] **CLI:** `add-task <PARENT-ID> <title>`, `list-tasks <ISSUE-ID>`.
+- [x] **Sub-tasks:** `parent_id` FK on work items enables task hierarchy. *(done 2026-03-13)*
+- [x] **Progress rollup:** `get_child_progress()` calculates parent completion from child states. *(done 2026-03-13)*
+- [x] **CLI:** `add-task <PARENT-ID> <title>`, `list-tasks <ISSUE-ID>` with progress bar. *(done 2026-03-13)*
 
 ---
 
@@ -158,7 +147,7 @@ Layered on top of the Phase 2 state engine. The engine already records state cha
 
 - [ ] **Expanded test suite:**
     - [x] Integration tests for CLI commands. *(done 2026-03-12, `0ced06b`)*
-    - [ ] Tests for new ledger capabilities (assignments, states, artifacts, reviews).
+    - [x] Tests for new ledger capabilities (assignments, states, artifacts, reviews). *(done 2026-03-13)*
     - [ ] Property-based testing for data validation.
 - [ ] **GitHub Actions CI:** Automate linting (`ruff`), type-checking (`mypy`), and testing on every push.
 - [ ] **Dockerization:** Dockerfile for the API and CLI.

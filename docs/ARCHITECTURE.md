@@ -14,7 +14,7 @@ See [PURPOSE.md](PURPOSE.md) for full scope boundaries. See [ROADMAP.md](ROADMAP
 
 ## Current Architecture
 
-*Updated after Phase 1 completion (2026-03-13).*
+*Updated after Phase 2 completion (2026-03-13).*
 
 ### Three-Layer Design
 
@@ -29,19 +29,20 @@ See [PURPOSE.md](PURPOSE.md) for full scope boundaries. See [ROADMAP.md](ROADMAP
 │  Commands / Handlers           │                      │
 │  ┌──────┴───────┐              │                      │
 │  │  commands/    │              │                      │
-│  │  create_issue │              │                      │
-│  │  list_issues  │              │                      │
-│  │  view_issue   │              │                      │
-│  │  list_repos   │              │                      │
-│  │  add_repo     │              │                      │
-│  │  update_repo  │              │                      │
-│  │  remove_repo  │              │                      │
+│  │  create_issue │  state       │                      │
+│  │  list_issues  │  assign      │                      │
+│  │  view_issue   │  execution   │                      │
+│  │  list_repos   │  review      │                      │
+│  │  add_repo     │  session     │                      │
+│  │  update_repo  │  attachments │                      │
+│  │  remove_repo  │  tasks       │                      │
 │  │  migrate_issues│             │                      │
 │  └──────┬───────┘              │                      │
 ├─────────┼──────────────────────┼─────────────────────┤
 │  Core                          │                      │
 │  ┌─────────────────────────────┴───────────────────┐ │
 │  │  database.py        — SQLModel data access layer │ │
+│  │  state_engine.py    — transitions + concurrency  │ │
 │  │  repository_manager — repo validation + CRUD     │ │
 │  └──────────────────────────────────────────────────┘ │
 │  ┌──────────────────────────────────────────────────┐ │
@@ -71,9 +72,11 @@ ForgeOps uses a **single SQLite database** as the sole source of truth. Both CLI
         │  ┌────────────────────────────┐ │
         │  │  repositories              │ │
         │  │  work_items                │ │
-        │  │  assignments (Phase 2)     │ │
-        │  │  execution_records (Ph. 2) │ │
-        │  │  reviews (Phase 2)         │ │
+        │  │  assignments               │ │
+        │  │  execution_records          │ │
+        │  │  reviews                    │ │
+        │  │  activity_log               │ │
+        │  │  attachments                │ │
         │  └────────────────────────────┘ │
         └─────────────────────────────────┘
 ```
@@ -111,7 +114,26 @@ All models defined in `models.py` using SQLModel (Pydantic + SQLAlchemy).
 | created_at | DATETIME | auto-set |
 | updated_at | DATETIME | auto-updated |
 
-**`assignments` table** (schema defined, populated in Phase 2)
+**`activity_log` table**
+| Column | Type | Constraints |
+|--------|------|-------------|
+| log_id | INTEGER | PRIMARY KEY |
+| task_id | INTEGER | FK → work_items.task_id, nullable, indexed |
+| action | TEXT | enum (state_change, blocked, unblocked, assigned, comment, created, review_submitted, execution_logged) |
+| detail | TEXT | nullable |
+| actor | TEXT | nullable |
+| created_at | DATETIME | auto-set |
+
+**`attachments` table**
+| Column | Type | Constraints |
+|--------|------|-------------|
+| attachment_id | INTEGER | PRIMARY KEY |
+| task_id | INTEGER | FK → work_items.task_id, indexed |
+| url_or_path | TEXT | NOT NULL |
+| label | TEXT | nullable |
+| created_at | DATETIME | auto-set |
+
+**`assignments` table**
 | Column | Type | Constraints |
 |--------|------|-------------|
 | assignment_id | INTEGER | PRIMARY KEY |
@@ -120,8 +142,7 @@ All models defined in `models.py` using SQLModel (Pydantic + SQLAlchemy).
 | executor_type | TEXT | "human" / "agent" |
 | assigned_at | DATETIME | auto-set |
 
-**`execution_records` table** (schema defined, populated in Phase 2)
-| Column | Type | Constraints |
+**`execution_records` table** | Column | Type | Constraints |
 |--------|------|-------------|
 | run_id | INTEGER | PRIMARY KEY |
 | task_id | INTEGER | FK → work_items.task_id |
@@ -133,8 +154,7 @@ All models defined in `models.py` using SQLModel (Pydantic + SQLAlchemy).
 | artifact_ref | TEXT | nullable |
 | created_at | DATETIME | auto-set |
 
-**`reviews` table** (schema defined, populated in Phase 2)
-| Column | Type | Constraints |
+**`reviews` table** | Column | Type | Constraints |
 |--------|------|-------------|
 | review_id | INTEGER | PRIMARY KEY |
 | task_id | INTEGER | FK → work_items.task_id |
@@ -170,13 +190,20 @@ User → CLI prompt
 
 ```
 main.py
-  ├── commands/create_issue  → core/database, core/repository_manager, utils/validators
-  ├── commands/list_issues   → core/database, models
-  ├── commands/view_issue    → core/database
-  ├── commands/list_repos    → core/database
-  ├── commands/add_repo      → core/database, core/repository_manager
-  ├── commands/update_repo   → core/database, core/repository_manager
-  ├── commands/remove_repo   → core/database, core/repository_manager
+  ├── commands/create_issue   → core/database, core/repository_manager, utils/validators
+  ├── commands/list_issues    → core/database, models
+  ├── commands/view_issue     → core/database
+  ├── commands/state          → core/database, core/state_engine
+  ├── commands/assign         → core/database
+  ├── commands/execution      → core/database
+  ├── commands/review         → core/database, core/state_engine
+  ├── commands/session        → core/database, config
+  ├── commands/attachments    → core/database
+  ├── commands/tasks          → core/database
+  ├── commands/list_repos     → core/database
+  ├── commands/add_repo       → core/database, core/repository_manager
+  ├── commands/update_repo    → core/database, core/repository_manager
+  ├── commands/remove_repo    → core/database, core/repository_manager
   └── commands/migrate_issues → core/database, config
 
 api.py → core/database, models
@@ -188,18 +215,37 @@ api.py → core/database, models
 
 ### CLI (`main.py`)
 
-Typer-based with 8 commands. Rich output for tables and panels. Interactive input via `InputValidator`. Repository autocompletion on `--repo`.
+Typer-based with 27 commands. Rich output for tables and panels. Interactive input via `InputValidator`. Repository autocompletion on `--repo`.
 
-| Command | Args/Options | Storage |
-|---------|-------------|---------|
-| `create-issue` | `--priority`, `--created-by` (interactive) | writes `forgeops.db` |
-| `list-issues` | `--repo`, `--state`, `--blocked` | reads `forgeops.db` |
-| `view-issue` | `WI-<n>` or `<n>` | reads `forgeops.db` |
-| `list-repos` | `--all` (includes archived) | reads `forgeops.db` |
-| `add-repo` | `<name>`, `--org`, `--branch`, `--url`, `--description` | writes `forgeops.db` |
-| `update-repo` | `<name>`, `--org`, `--branch`, `--status`, `--url`, `--description` | writes `forgeops.db` |
-| `remove-repo` | `<name>` | writes `forgeops.db` |
-| `migrate-issues` | — | reads legacy JSON, writes `forgeops.db` |
+| Command | Args/Options | Category |
+|---------|-------------|----------|
+| `create-issue` | `--priority`, `--created-by` (interactive) | Work Items |
+| `list-issues` | `--repo`, `--state`, `--blocked`, `--priority` | Work Items |
+| `view-issue` | `WI-<n>` or `<n>` | Work Items |
+| `update-status` | `<ID> --state <state>` | State Engine |
+| `block` | `<ID> --reason "..."` | State Engine |
+| `unblock` | `<ID>` | State Engine |
+| `assign` | `<ID> <executor> --type human\|agent` | Assignments |
+| `my-issues` | `<executor>` | Assignments |
+| `agent-tasks` | `<executor>` | Assignments |
+| `log-run` | `<ID> --executor --status [--branch --commit]` | Execution |
+| `runs` | `<ID>` | Execution |
+| `review-queue` | — | Reviews |
+| `approve` | `<ID> --reviewer [--note]` | Reviews |
+| `request-changes` | `<ID> --reviewer [--note]` | Reviews |
+| `status` | — | Session |
+| `next` | — | Session |
+| `snapshot` | — | Session |
+| `resume` | — | Session |
+| `attach` | `<ID> <url-or-path> [--label]` | Attachments |
+| `list-attachments` | `<ID>` | Attachments |
+| `add-task` | `<parent-ID> <title>` | Task Hierarchy |
+| `list-tasks` | `<parent-ID>` | Task Hierarchy |
+| `list-repos` | `--all` | Repositories |
+| `add-repo` | `<name> [--org --branch --url --description]` | Repositories |
+| `update-repo` | `<name> [--org --branch --status --url --description]` | Repositories |
+| `remove-repo` | `<name>` | Repositories |
+| `migrate-issues` | — | Migration |
 
 ### REST API (`api.py`)
 
@@ -257,7 +303,7 @@ Five core objects, all defined as SQLModel tables in `models.py`. The data model
                        └──────────────┘
 ```
 
-All five tables exist in the database. Repository and WorkItem are actively used. Assignment, ExecutionRecord, and Review tables are created but will be populated by Phase 2 commands.
+All seven tables are actively used. The data model diagram above shows the five core objects; `activity_log` and `attachments` tables are documented in the schema section above.
 
 ### State Engine
 
@@ -279,17 +325,19 @@ queued → assigned → executing → completed → awaiting_review → accepted
 
 ## Mapping to Roadmap
 
-### What exists today (after Phase 1)
+### What exists today (after Phase 2)
 
 | Target object | Current state | Where in code |
 |---------------|---------------|---------------|
-| Repository | Full metadata (name, org, branch, status, url, description). CRUD via CLI + API. Active/archived filtering. | `models.Repository`, `core/database.py`, `core/repository_manager.py` |
-| Work Item | Unified `work_items` table. State and priority fields present but no transition validation yet. | `models.WorkItem`, `core/database.py` |
-| Assignment | Table exists in DB schema, model defined. No CLI/API commands yet. | `models.Assignment` |
-| Execution Record | Table exists in DB schema, model defined. No CLI/API commands yet. | `models.ExecutionRecord` |
-| Review | Table exists in DB schema, model defined. No CLI/API commands yet. | `models.Review` |
-| State Engine | States defined as enum. No transition validation, no concurrency guard. | `models.WorkItemState` |
-| Session Continuity | Not implemented. No `status`, `snapshot`, `resume`, or `next` commands. | — |
+| Repository | Full metadata + CRUD. Active/archived filtering. | `models.Repository`, `core/database.py`, `core/repository_manager.py` |
+| Work Item | Unified `work_items` table with state engine validation. | `models.WorkItem`, `core/database.py` |
+| Assignment | Append-only history, `my-issues`, `agent-tasks`. | `models.Assignment`, `core/database.py`, `commands/assign.py` |
+| Execution Record | Multiple attempts per item, git auto-detect. | `models.ExecutionRecord`, `core/database.py`, `commands/execution.py` |
+| Review | Review queue, approve/request-changes workflow. | `models.Review`, `core/database.py`, `commands/review.py` |
+| State Engine | 8-state lifecycle, transition validation, repo concurrency guard. | `core/state_engine.py`, `core/database.py` |
+| Session Continuity | `status`, `next`, `snapshot`/`resume`, activity log. | `commands/session.py`, `models.ActivityLog` |
+| Attachments | General-purpose links on work items. | `models.Attachment`, `commands/attachments.py` |
+| Task Hierarchy | Parent-child relationships with progress rollup. | `commands/tasks.py`, `core/database.py` |
 
 ### Phase 1 (complete)
 
@@ -300,16 +348,16 @@ queued → assigned → executing → completed → awaiting_review → accepted
 - Rich CLI output, repository autocompletion
 - `config.py` with environment variable support
 
-### Phase 2 additions to this architecture
+### Phase 2 (complete)
 
-New core modules for:
-- **State engine** — 8-state lifecycle with transition validation, orthogonal block mechanism, repo concurrency guard
-- **Assignments** — separate table, append-only history, `executor_type` discriminator (human | agent)
-- **Execution records** — structured record of agent runs (branch, commit, status, logs_ref, artifact_ref), multiple attempts per work item
-- **Review workflow** — review queue fed by execution records, append-only decision log
-- **Session continuity** — `status` (overview), `snapshot`/`resume` (cross-session state), `next` (human attention queue), activity log
-- **Artifacts** — run-specific refs on execution records + general-purpose attachments table
-- **Task hierarchy** — parent-child relationships, progress rollup
+- State engine with transition validation and repo concurrency guard (`core/state_engine.py`)
+- Assignments — append-only history, `executor_type` discriminator (human | agent)
+- Execution records — branch, commit, status, logs_ref, artifact_ref; multiple attempts per work item
+- Review workflow — review queue fed by execution records, append-only decision log
+- Session continuity — `status`, `snapshot`/`resume`, `next`, activity log
+- Attachments — general-purpose links on work items
+- Task hierarchy — parent-child relationships with progress rollup
+- 27 CLI commands, 110 tests passing
 
 ### Phase 3 additions to this architecture
 

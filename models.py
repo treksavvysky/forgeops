@@ -52,6 +52,17 @@ class ReviewDecision(str, enum.Enum):
     rework_required = "rework_required"
 
 
+class ActivityAction(str, enum.Enum):
+    state_change = "state_change"
+    blocked = "blocked"
+    unblocked = "unblocked"
+    assigned = "assigned"
+    comment = "comment"
+    created = "created"
+    review_submitted = "review_submitted"
+    execution_logged = "execution_logged"
+
+
 # --- Repository ---------------------------------------------------------------
 
 class Repository(SQLModel, table=True):
@@ -127,4 +138,29 @@ class Review(SQLModel, table=True):
     reviewer: str
     decision: ReviewDecision
     note: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# --- ActivityLog --------------------------------------------------------------
+
+class ActivityLog(SQLModel, table=True):
+    __tablename__ = "activity_log"
+
+    log_id: Optional[int] = Field(default=None, primary_key=True)
+    task_id: Optional[int] = Field(default=None, foreign_key="work_items.task_id", index=True)
+    action: ActivityAction
+    detail: Optional[str] = None
+    actor: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# --- Attachment ---------------------------------------------------------------
+
+class Attachment(SQLModel, table=True):
+    __tablename__ = "attachments"
+
+    attachment_id: Optional[int] = Field(default=None, primary_key=True)
+    task_id: int = Field(foreign_key="work_items.task_id", index=True)
+    url_or_path: str
+    label: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from core.database import create_db_and_tables, list_work_items
-from models import WorkItemState
+from models import Priority, WorkItemState
 
 console = Console()
 
@@ -15,6 +15,7 @@ def list_issues(
     repo_filter: Optional[str] = None,
     state_filter: Optional[str] = None,
     show_blocked: Optional[bool] = None,
+    priority_filter: Optional[str] = None,
 ) -> None:
     engine = create_db_and_tables()
 
@@ -26,11 +27,20 @@ def list_issues(
             console.print(f"[red]Unknown state: {state_filter}[/red]")
             return
 
+    priority = None
+    if priority_filter:
+        try:
+            priority = Priority(priority_filter)
+        except ValueError:
+            console.print(f"[red]Unknown priority: {priority_filter}[/red]")
+            return
+
     items = list_work_items(
         engine,
         repo_name=repo_filter,
         state=state,
         is_blocked=show_blocked,
+        priority=priority,
     )
 
     if not items:

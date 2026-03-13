@@ -12,8 +12,9 @@ wheels/
 # Testing
 .pytest_cache/
 
-# Database
+# Database and runtime state
 forgeops.db
+.forgeops_snapshot.json
 
 # Legacy data files (no longer used by code, kept for reference)
 issues/

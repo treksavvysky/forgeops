@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ForgeOps is a cross-repo work ledger for AI-assisted software development. It tracks issues, tasks, assignments, and progress so that work remains organized, reviewable, and resumable across sessions and repositories. See `docs/PURPOSE.md` for scope boundaries and `docs/VISION.md` for long-term direction.
 
-The codebase is a Python CLI + REST API backed by SQLite via SQLModel. Phase 1 (Unified Foundation) is complete — all data lives in a single SQLite database with Pydantic/SQLModel models. See `docs/ARCHITECTURE.md` for full architecture and `docs/ROADMAP.md` for the build plan.
+The codebase is a Python CLI + REST API backed by SQLite via SQLModel. Phase 1 (Unified Foundation) and Phase 2 (Work Ledger Capabilities) are complete — all data lives in a single SQLite database with Pydantic/SQLModel models. The CLI has 27 commands covering the full work item lifecycle. See `docs/ARCHITECTURE.md` for full architecture and `docs/ROADMAP.md` for the build plan.
 
 ## Commands
 
@@ -14,14 +14,19 @@ The codebase is a Python CLI + REST API backed by SQLite via SQLModel. Phase 1 (
 ```bash
 uv run python main.py <command>
 ```
-Available commands: `create-issue`, `list-issues`, `view-issue`, `list-repos`, `add-repo`, `update-repo`, `remove-repo`, `migrate-issues`. Run `uv run python main.py --help` for full help.
+27 commands across 8 categories. Run `uv run python main.py --help` for full list.
 
-Key options:
-- `list-issues --repo <name> --state <state> --blocked`
-- `add-repo <name> --org <org> --branch <branch> --url <url> --description <desc>`
-- `update-repo <name> --org <org> --branch <branch> --status active|archived --url <url> --description <desc>`
-- `list-repos --all` (includes archived)
-- `view-issue WI-<n>` or `view-issue <n>`
+Key commands:
+- **Work items:** `create-issue`, `list-issues`, `view-issue`
+- **State engine:** `update-status <ID> --state <state>`, `block <ID> --reason "..."`, `unblock <ID>`
+- **Assignments:** `assign <ID> <executor> --type human|agent`, `my-issues <executor>`, `agent-tasks <executor>`
+- **Execution:** `log-run <ID> --executor --status`, `runs <ID>`
+- **Reviews:** `review-queue`, `approve <ID> --reviewer`, `request-changes <ID> --reviewer`
+- **Session:** `status`, `next`, `snapshot`, `resume`
+- **Attachments:** `attach <ID> <url>`, `list-attachments <ID>`
+- **Tasks:** `add-task <parent-ID> <title>`, `list-tasks <parent-ID>`
+- **Repos:** `list-repos`, `add-repo`, `update-repo`, `remove-repo`
+- **Migration:** `migrate-issues`
 
 ### Running the API
 ```bash
@@ -47,11 +52,12 @@ Runtime: FastAPI, SQLModel (includes SQLAlchemy + Pydantic), Rich, Typer, uvicor
 ## Architecture
 
 **Key files:**
-- `models.py` — SQLModel/Pydantic models for all 5 core objects (Repository, WorkItem, Assignment, ExecutionRecord, Review) plus enums
+- `models.py` — SQLModel/Pydantic models for 7 tables (Repository, WorkItem, Assignment, ExecutionRecord, Review, ActivityLog, Attachment) plus enums
 - `config.py` — Centralized configuration with env var support (`FORGEOPS_DB_PATH`, `FORGEOPS_BASE_DIR`)
 - `core/database.py` — SQLModel data access layer (single source of truth)
+- `core/state_engine.py` — Transition validation and repo concurrency guard
 - `core/repository_manager.py` — Repository validation and management
-- `commands/` — CLI command handlers (one per file)
+- `commands/` — CLI command handlers (one per file, 14 modules)
 - `api.py` — FastAPI REST endpoints
 
 **Data flows through SQLite only.** No JSON files. The `migrate-issues` command imports legacy JSON data into the new schema.
