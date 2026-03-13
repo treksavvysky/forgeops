@@ -134,7 +134,7 @@ Layered on top of the Phase 2 state engine. The engine already records state cha
 - [x] **Hook system:** `core/hooks.py` — `HookRegistry` with subscribe/unsubscribe/fire. Decorator and programmatic registration. Failing handlers logged, not raised. *(done 2026-03-13)*
 - [x] **State engine events:** All 7 events implemented and firing from `core/database.py`: `on_state_change`, `on_blocked`/`on_unblocked`, `on_assigned`, `on_execution_complete`, `on_review_submitted`, `on_repo_conflict`, `on_rework`. *(done 2026-03-13)*
 - [ ] **JCT integration:** When JCT dispatches a task, ForgeOps creates an assignment and work item. When the agent completes, an execution record is logged and the item moves to `awaiting_review`. Driven by `on_state_change` and `on_assigned` hooks.
-- [ ] **MCP server:** Expose ForgeOps as an MCP tool server so AI agents can read/update the ledger directly.
+- [x] **MCP server:** `mcp_server.py` — 19 tools exposing full ledger CRUD over stdio transport. Run via `uv run python mcp_server.py`. *(done 2026-03-13)*
 
 ### Quality & DevOps
 

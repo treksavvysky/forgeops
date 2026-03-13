@@ -21,10 +21,10 @@ See [PURPOSE.md](PURPOSE.md) for full scope boundaries. See [ROADMAP.md](ROADMAP
 ```
 ┌──────────────────────────────────────────────────────┐
 │  Interfaces                                          │
-│  ┌──────────────┐  ┌────────────────────────┐        │
-│  │  CLI (Typer)  │  │  REST API (FastAPI)    │        │
-│  │  main.py      │  │  api.py                │        │
-│  └──────┬───────┘  └───────────┬────────────┘        │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐  │
+│  │ CLI (Typer)  │ │ REST API     │ │ MCP Server   │  │
+│  │ main.py      │ │ api.py       │ │ mcp_server.py│  │
+│  └──────┬───────┘ └──────┬──────┘ └──────┬───────┘  │
 ├─────────┼──────────────────────┼─────────────────────┤
 │  Commands / Handlers           │                      │
 │  ┌──────┴───────┐              │                      │
@@ -385,6 +385,8 @@ Completed:
 - Event hook system (`core/hooks.py`) — 7 events firing from database operations
 - 155 tests passing (45 new Phase 3 tests for API + hooks)
 
+- MCP server (`mcp_server.py`) — 19 tools over stdio transport for AI agent access
+- 171 tests passing (16 new MCP tests)
+
 Remaining:
 - JCT integration via hooks
-- MCP server for AI agent access

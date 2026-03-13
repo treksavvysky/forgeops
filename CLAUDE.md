@@ -32,7 +32,14 @@ Key commands:
 ```bash
 uv run uvicorn api:app --reload --host 127.0.0.1 --port 8002
 ```
+
 Serves at `http://localhost:8002`. Full CRUD API — docs at `/docs`. Auth via `API_BEARER_TOKEN` env var (skipped if unset). Port configurable via `FORGEOPS_API_PORT` (default 8002).
+
+### Running the MCP Server
+```bash
+uv run python mcp_server.py
+```
+Stdio transport — 19 tools for full ledger CRUD. For Claude Code integration, add to `.claude/settings.local.json`.
 
 ### Running Tests
 ```bash

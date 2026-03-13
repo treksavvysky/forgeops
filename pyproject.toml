@@ -10,7 +10,11 @@ dependencies = [
     "sqlmodel",
     "typer",
     "uvicorn[standard]",
+    "mcp[cli]",
 ]
+
+[project.scripts]
+forgeops-mcp = "mcp_server:main"
 
 [project.optional-dependencies]
 test = [
