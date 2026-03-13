@@ -9,7 +9,7 @@ The core problem: when AI agents (like Jules) generate code across multiple repo
 | Object | Current state |
 |---|---|
 | **Repository** — `repo_id`, `name`, `org`, `default_branch`, `status`, `url`, `description` | Name registry only — no metadata |
-| **Work Item** (issue/task) — `task_id`, `repo_id` (FK), `title`, `description`, `state`, `priority`, `parent_id`, `created_by`, `created_at`, `updated_at` | Two disconnected systems — issues (JSON) and tasks (JSON), not linked |
+| **Work Item** (issue/task) — `task_id`, `repo_id` (FK), `title`, `description`, `state`, `priority`, `is_blocked`, `blocked_reason`, `parent_id`, `created_by`, `created_at`, `updated_at` | Two disconnected systems — issues (JSON) and tasks (JSON), not linked |
 | **Assignment** — `assignment_id`, `task_id` (FK), `executor`, `executor_type` (human\|agent), `assigned_at` | Not implemented |
 | **Execution Record** — `run_id`, `task_id` (FK), `executor`, `branch`, `commit`, `status`, `logs_ref`, `artifact_ref`, `created_at` | Not implemented |
 | **Review** — `review_id`, `task_id` (FK), `reviewer`, `decision`, `note`, `created_at` | Not implemented |
@@ -33,7 +33,7 @@ ForgeOps does not duplicate these systems. It is the ledger that records *what w
 
 ### Data Model
 
-- [ ] **Unified work-item schema:** Collapse issues and tasks into one `work_items` table with: task_id, repo_id (FK), title, description, state, priority, parent_id (for sub-tasks), created_by, created_at, updated_at.
+- [ ] **Unified work-item schema:** Collapse issues and tasks into one `work_items` table with: task_id, repo_id (FK), title, description, state, priority, is_blocked, blocked_reason, parent_id (for sub-tasks), created_by, created_at, updated_at.
 - [ ] **Pydantic models:** Define `WorkItem`, `Repository`, `Assignment`, `ExecutionRecord`, and `Review` models for strict validation across CLI, API, and DB layers.
 - [ ] **SQLModel integration:** Replace raw sqlite3 queries and JSON file storage with SQLModel for type-safe DB interactions. Retire the dual-storage (JSON files + SQLite) model.
 - [ ] **Centralized configuration:** Move hardcoded paths (`forgeops.db`, `issues/`) to a `config.py` supported by environment variables.
@@ -63,18 +63,42 @@ ForgeOps does not duplicate these systems. It is the ledger that records *what w
 - [ ] **Assignment CLI:** `assign <ID> <executor> --type human|agent`, `my-issues`, `agent-tasks <executor>`.
 - [ ] **Assignment history:** The assignments table is append-only — reassignment creates a new record, preserving full ownership history.
 
-### Progress States
+### State Engine
 
-- [ ] **State machine:** Define allowed states (`Open`, `In Progress`, `Blocked`, `Review`, `Resolved`, `Closed`) and valid transitions.
-- [ ] **Status commands:** `update-issue <ID> --status <state>` with transition validation.
-- [ ] **Filter by state:** `list-issues --status open`, `list-issues --status blocked`, `list-issues --status review`.
+ForgeOps owns the state machine. The lifecycle reflects the AI-assisted workflow — not generic project management.
+
+- [ ] **Lifecycle states:** Eight states tracking where a work item is in the process:
+
+  ```
+  queued → assigned → executing → completed → awaiting_review → accepted → closed
+                          ↑                                        │
+                          └──────── rework_required ───────────────┘
+  ```
+
+  | State | Meaning |
+  |-------|---------|
+  | `queued` | Created, not yet assigned to an executor |
+  | `assigned` | Executor (human or agent) designated |
+  | `executing` | Work actively in progress |
+  | `completed` | Execution finished, output produced |
+  | `awaiting_review` | Human reviewer needs to inspect |
+  | `accepted` | Review passed |
+  | `rework_required` | Review failed — needs another execution cycle |
+  | `closed` | Done, no further action |
+
+- [ ] **Block mechanism:** Blocking is orthogonal to lifecycle state. A work item carries `is_blocked` (bool) and `blocked_reason` (text). A task can be `queued and blocked`, `executing and blocked`, `awaiting_review and blocked`, etc. Blocking preserves the underlying state so unblocking resumes where it was.
+- [ ] **Block CLI:** `block <ID> --reason "waiting on API key"`, `unblock <ID>`. Blocked items surfaced in `next` command and filtered views.
+- [ ] **Repo concurrency guard:** Only one work item per repository may be in `executing` state at a time. Transition to `executing` is rejected if another item for the same `repo_id` is already executing. This prevents conflicting changes to the same repo by parallel agents.
+- [ ] **Parallel work:** State transitions are per-work-item with no global locks. An executor can have multiple assignments in different states concurrently across different repos. The rework loop does not block new work from being queued or assigned.
+- [ ] **Status commands:** `update-status <ID> --state <state>` with transition validation. Invalid transitions rejected with clear error.
+- [ ] **Filter by state:** `list-issues --state queued`, `list-issues --state awaiting_review`, `list-issues --blocked`.
 - [ ] **Priority levels:** `Low`, `Medium`, `High`, `Urgent` — filterable and sortable.
 
 ### Session Continuity
 
-- [ ] **Work snapshots:** Capture current state across all open work items — what's in progress, what's blocked, what's awaiting review. CLI: `snapshot`, `resume` (shows snapshot from last session).
+- [ ] **Work snapshots:** Capture current state across all open work items — what's executing, what's blocked, what's awaiting review. CLI: `snapshot`, `resume` (shows snapshot from last session).
 - [ ] **Activity log:** Append-only record of state changes, comments, and assignments — so the operator can see what happened while they were away.
-- [ ] **Next-actions view:** `next` command that surfaces the highest-priority items needing human attention (items in `Review` state, blocked items, stale assignments).
+- [ ] **Next-actions view:** `next` command that surfaces the highest-priority items needing human attention (items in `awaiting_review`, blocked items, stale assignments).
 
 ### Execution Records
 
@@ -85,7 +109,7 @@ ForgeOps does not duplicate these systems. It is the ledger that records *what w
 
 ### AI-Generated Code Review
 
-- [ ] **Review queue:** Work items in `Review` state represent AI-generated output awaiting human inspection. `review-queue` lists them with execution record context (branch, commit, what changed).
+- [ ] **Review queue:** Work items in `awaiting_review` state represent AI-generated output awaiting human inspection. `review-queue` lists them with execution record context (branch, commit, what changed).
 - [ ] **Review workflow:** `start-review <ID>`, `approve <ID>`, `request-changes <ID> --note "..."`. Each review is a record: `review_id`, `task_id` (FK), `reviewer`, `decision`, `note`, `created_at`.
 - [ ] **Decision log:** The reviews table is append-only — full history of review decisions per work item.
 
@@ -111,12 +135,12 @@ ForgeOps does not duplicate these systems. It is the ledger that records *what w
 
 - [ ] **Full CRUD API:** POST, GET, PATCH, DELETE for work items, repositories, assignments, execution records, reviews, and attachments.
 - [ ] **API authentication:** Bearer token or API key auth.
-- [ ] **Filtering & search:** Query params for status, priority, assignee, repository. Full-text search on title/description.
+- [ ] **Filtering & search:** Query params for state, priority, assignee, repository, is_blocked. Full-text search on title/description.
 
 ### Ecosystem Hooks
 
-- [ ] **JCT integration:** When JCT dispatches a task to an AI agent, ForgeOps creates an assignment and work item. When the agent completes, an execution record is logged and the item moves to `Review`.
-- [ ] **Event bus:** Fire events on state transitions (e.g., item moved to `Review`) that other systems can subscribe to.
+- [ ] **JCT integration:** When JCT dispatches a task to an AI agent, ForgeOps creates an assignment and work item. When the agent completes, an execution record is logged and the item moves to `awaiting_review`.
+- [ ] **Event bus:** Fire events on state transitions (e.g., item moved to `awaiting_review`) that other systems can subscribe to.
 - [ ] **MCP server:** Expose ForgeOps as an MCP tool server so AI agents can read/update the ledger directly.
 
 ### Quality & DevOps
