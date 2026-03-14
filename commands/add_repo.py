@@ -17,6 +17,10 @@ def add_repo(
     default_branch: Optional[str] = None,
     url: Optional[str] = None,
     description: Optional[str] = None,
+    local_path: Optional[str] = None,
+    language: Optional[str] = None,
+    deploy_target: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> None:
     engine = create_db_and_tables()
     repo_manager = RepositoryManager(engine)
@@ -32,6 +36,10 @@ def add_repo(
         default_branch=default_branch,
         url=url,
         description=description,
+        local_path=local_path,
+        language=language,
+        deploy_target=deploy_target,
+        notes=notes,
     )
 
     if success:

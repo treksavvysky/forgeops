@@ -304,9 +304,23 @@ def add_repo(
     branch: Optional[str] = typer.Option(None, "--branch", help="Default branch"),
     url: Optional[str] = typer.Option(None, "--url", help="Repository URL"),
     description: Optional[str] = typer.Option(None, "--description", "-d", help="Description"),
+    local_path: Optional[str] = typer.Option(None, "--path", help="Local filesystem path"),
+    language: Optional[str] = typer.Option(None, "--lang", help="Primary language/stack"),
+    deploy_target: Optional[str] = typer.Option(None, "--deploy", help="Deploy target (docker, vercel, etc.)"),
+    notes: Optional[str] = typer.Option(None, "--notes", help="Dev environment notes"),
 ):
     """Add a new repository to the registry."""
-    _add_repo(repo_name, org=org, default_branch=branch, url=url, description=description)
+    _add_repo(
+        repo_name,
+        org=org,
+        default_branch=branch,
+        url=url,
+        description=description,
+        local_path=local_path,
+        language=language,
+        deploy_target=deploy_target,
+        notes=notes,
+    )
 
 
 @app.command()
@@ -317,9 +331,24 @@ def update_repo(
     status: Optional[str] = typer.Option(None, "--status", help="Status: active or archived"),
     url: Optional[str] = typer.Option(None, "--url", help="Repository URL"),
     description: Optional[str] = typer.Option(None, "--description", "-d", help="Description"),
+    local_path: Optional[str] = typer.Option(None, "--path", help="Local filesystem path"),
+    language: Optional[str] = typer.Option(None, "--lang", help="Primary language/stack"),
+    deploy_target: Optional[str] = typer.Option(None, "--deploy", help="Deploy target (docker, vercel, etc.)"),
+    notes: Optional[str] = typer.Option(None, "--notes", help="Dev environment notes"),
 ):
     """Update repository metadata."""
-    _update_repo(repo_name, org=org, default_branch=branch, status=status, url=url, description=description)
+    _update_repo(
+        repo_name,
+        org=org,
+        default_branch=branch,
+        status=status,
+        url=url,
+        description=description,
+        local_path=local_path,
+        language=language,
+        deploy_target=deploy_target,
+        notes=notes,
+    )
 
 
 @app.command()

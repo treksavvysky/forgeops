@@ -149,8 +149,8 @@ class TestListReposCommand(CommandTestBase):
         self.assertIn("bravo", output)
 
     def test_list_repos_excludes_archived(self):
-        add_repository(self.engine, "active-one")
-        add_repository(self.engine, "archived-one", status=RepoStatus.archived)
+        add_repository(self.engine, "aaa")
+        add_repository(self.engine, "zzz", status=RepoStatus.archived)
 
         from commands.list_repos import list_repos
 
@@ -158,8 +158,8 @@ class TestListReposCommand(CommandTestBase):
             with patch("sys.stdout", new_callable=StringIO) as out:
                 list_repos()
         output = out.getvalue()
-        self.assertIn("active-one", output)
-        self.assertNotIn("archived-one", output)
+        self.assertIn("aaa", output)
+        self.assertNotIn("zzz", output)
 
 
 class TestAddRepoCommand(CommandTestBase):

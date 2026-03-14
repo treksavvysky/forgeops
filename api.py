@@ -106,6 +106,10 @@ class RepositoryCreate(BaseModel):
     default_branch: Optional[str] = None
     url: Optional[str] = None
     description: Optional[str] = None
+    local_path: Optional[str] = None
+    language: Optional[str] = None
+    deploy_target: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class RepositoryUpdate(BaseModel):
@@ -114,6 +118,10 @@ class RepositoryUpdate(BaseModel):
     status: Optional[str] = None
     url: Optional[str] = None
     description: Optional[str] = None
+    local_path: Optional[str] = None
+    language: Optional[str] = None
+    deploy_target: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class AssignmentCreate(BaseModel):
@@ -174,6 +182,10 @@ def _serialize_repo(r):
         "status": r.status.value,
         "url": r.url,
         "description": r.description,
+        "local_path": r.local_path,
+        "language": r.language,
+        "deploy_target": r.deploy_target,
+        "notes": r.notes,
     }
 
 

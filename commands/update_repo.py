@@ -19,6 +19,10 @@ def update_repo(
     status: Optional[str] = None,
     url: Optional[str] = None,
     description: Optional[str] = None,
+    local_path: Optional[str] = None,
+    language: Optional[str] = None,
+    deploy_target: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> None:
     engine = create_db_and_tables()
     repo_manager = RepositoryManager(engine)
@@ -37,6 +41,14 @@ def update_repo(
         updates["url"] = url
     if description is not None:
         updates["description"] = description
+    if local_path is not None:
+        updates["local_path"] = local_path
+    if language is not None:
+        updates["language"] = language
+    if deploy_target is not None:
+        updates["deploy_target"] = deploy_target
+    if notes is not None:
+        updates["notes"] = notes
     if status is not None:
         try:
             updates["status"] = RepoStatus(status)

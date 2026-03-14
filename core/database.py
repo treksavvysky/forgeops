@@ -52,6 +52,10 @@ def add_repository(
     status: RepoStatus = RepoStatus.active,
     url: Optional[str] = None,
     description: Optional[str] = None,
+    local_path: Optional[str] = None,
+    language: Optional[str] = None,
+    deploy_target: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> Repository:
     with Session(engine) as session:
         existing = session.exec(select(Repository).where(Repository.name == name)).first()
@@ -64,6 +68,10 @@ def add_repository(
             status=status,
             url=url,
             description=description,
+            local_path=local_path,
+            language=language,
+            deploy_target=deploy_target,
+            notes=notes,
         )
         session.add(repo)
         session.commit()

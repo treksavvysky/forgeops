@@ -77,6 +77,10 @@ class Repository(SQLModel, table=True):
     status: RepoStatus = Field(default=RepoStatus.active)
     url: Optional[str] = None
     description: Optional[str] = None
+    local_path: Optional[str] = None
+    language: Optional[str] = None
+    deploy_target: Optional[str] = None
+    notes: Optional[str] = None
 
     work_items: list["WorkItem"] = Relationship(back_populates="repository")
 

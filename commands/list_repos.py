@@ -29,6 +29,9 @@ def list_repos(include_archived: bool = False) -> None:
     table.add_column("Status", no_wrap=True)
     table.add_column("URL")
     table.add_column("Description")
+    table.add_column("Path")
+    table.add_column("Lang")
+    table.add_column("Deploy")
 
     for i, repo in enumerate(repos, 1):
         status_style = "green" if repo.status.value == "active" else "dim"
@@ -40,6 +43,9 @@ def list_repos(include_archived: bool = False) -> None:
             f"[{status_style}]{repo.status.value}[/{status_style}]",
             repo.url or "—",
             repo.description or "—",
+            repo.local_path or "—",
+            repo.language or "—",
+            repo.deploy_target or "—",
         )
 
     console.print(table)

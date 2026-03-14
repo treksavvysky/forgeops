@@ -517,6 +517,10 @@ def forgeops_list_repos(include_archived: bool = False) -> str:
                     "status": r.status.value,
                     "url": r.url,
                     "description": r.description,
+                    "local_path": r.local_path,
+                    "language": r.language,
+                    "deploy_target": r.deploy_target,
+                    "notes": r.notes,
                 }
                 for r in repos
             ]
@@ -535,6 +539,10 @@ def forgeops_add_repo(
     default_branch: Optional[str] = None,
     url: Optional[str] = None,
     description: Optional[str] = None,
+    local_path: Optional[str] = None,
+    language: Optional[str] = None,
+    deploy_target: Optional[str] = None,
+    notes: Optional[str] = None,
 ) -> str:
     """Add a repository."""
     try:
@@ -547,6 +555,10 @@ def forgeops_add_repo(
             default_branch=default_branch,
             url=url,
             description=description,
+            local_path=local_path,
+            language=language,
+            deploy_target=deploy_target,
+            notes=notes,
         )
         return _success(
             repository={
@@ -554,6 +566,9 @@ def forgeops_add_repo(
                 "name": repo.name,
                 "org": repo.org,
                 "status": repo.status.value,
+                "local_path": repo.local_path,
+                "language": repo.language,
+                "deploy_target": repo.deploy_target,
             }
         )
     except Exception as e:
