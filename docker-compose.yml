@@ -6,16 +6,13 @@ services:
     ports:
       - "8002:8002"
     volumes:
-      - forgeops-data:/data
+      - ./forgeops.db:/data/forgeops.db
     environment:
       - FORGEOPS_DB_PATH=/data/forgeops.db
       - FORGEOPS_API_HOST=0.0.0.0
       - FORGEOPS_API_PORT=8002
     networks:
       - nginx-manager-network
-
-volumes:
-  forgeops-data:
 
 networks:
   nginx-manager-network:
