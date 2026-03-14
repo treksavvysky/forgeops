@@ -49,6 +49,14 @@ uv run python -m pytest tests/test_database.py::TestDatabaseLayer::test_create_a
 ```
 Tests use `unittest.TestCase` style. Install test deps with `uv sync --extra test`.
 
+### Linting & Type Checking
+```bash
+uv run ruff check .           # Lint
+uv run ruff format --check .  # Format check
+uv run mypy *.py core/ commands/  # Type check
+```
+All three run in CI (`.github/workflows/ci.yml`) on every push to `main`.
+
 ### Dependencies
 Managed with `uv` (lock file: `uv.lock`). Python 3.13+ required.
 ```bash

@@ -8,10 +8,10 @@ from datetime import datetime
 def format_datetime(iso_string):
     """Format ISO datetime string for display."""
     try:
-        dt = datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
-        return dt.strftime('%Y-%m-%d %H:%M:%S UTC')
+        dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
     except (ValueError, AttributeError):
-        return iso_string or 'Unknown'
+        return iso_string or "Unknown"
 
 
 def truncate_text(text, max_length):

@@ -7,11 +7,10 @@ from rich.console import Console
 from core.database import (
     block_work_item,
     create_db_and_tables,
-    get_work_item,
     transition_work_item,
     unblock_work_item,
 )
-from core.state_engine import InvalidTransitionError, RepoConcurrencyError, TRANSITIONS
+from core.state_engine import InvalidTransitionError, RepoConcurrencyError
 from models import WorkItemState
 
 console = Console()

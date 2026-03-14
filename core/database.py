@@ -42,6 +42,7 @@ def create_db_and_tables(db_path: Optional[str | Path] = None):
 
 # --- Repository CRUD ----------------------------------------------------------
 
+
 def add_repository(
     engine,
     name: str,
@@ -109,6 +110,7 @@ def remove_repository(engine, name: str) -> bool:
 
 # --- WorkItem CRUD ------------------------------------------------------------
 
+
 def create_work_item(
     engine,
     title: str,
@@ -139,8 +141,9 @@ def create_work_item(
         session.commit()
         session.refresh(item)
 
-        _log_activity(session, item.task_id, ActivityAction.created,
-                      detail=f"Created in state {state.value}", actor=created_by)
+        _log_activity(
+            session, item.task_id, ActivityAction.created, detail=f"Created in state {state.value}", actor=created_by
+        )
         session.refresh(item)
         return item
 
@@ -148,9 +151,7 @@ def create_work_item(
 def get_work_item(engine, task_id: int) -> Optional[WorkItem]:
     with Session(engine) as session:
         stmt = (
-            select(WorkItem)
-            .where(WorkItem.task_id == task_id)
-            .options(selectinload(WorkItem.repository))  # type: ignore[arg-type]
+            select(WorkItem).where(WorkItem.task_id == task_id).options(selectinload(WorkItem.repository))  # type: ignore[arg-type]
         )
         return session.exec(stmt).first()
 
@@ -225,9 +226,14 @@ def transition_work_item(
             try:
                 check_repo_concurrency(engine, item.repo_id, task_id)
             except Exception as e:
-                hooks.fire(HookEvent.on_repo_conflict, {
-                    "task_id": task_id, "repo_id": item.repo_id, "error": str(e),
-                })
+                hooks.fire(
+                    HookEvent.on_repo_conflict,
+                    {
+                        "task_id": task_id,
+                        "repo_id": item.repo_id,
+                        "error": str(e),
+                    },
+                )
                 raise
 
         item.state = new_state
@@ -235,14 +241,21 @@ def transition_work_item(
         session.add(item)
         session.commit()
 
-        _log_activity(session, task_id, ActivityAction.state_change,
-                      detail=f"{old_state.value} → {new_state.value}", actor=actor)
+        _log_activity(
+            session, task_id, ActivityAction.state_change, detail=f"{old_state.value} → {new_state.value}", actor=actor
+        )
         session.refresh(item)
 
     # Fire hooks after session is committed
-    hooks.fire(HookEvent.on_state_change, {
-        "task_id": task_id, "old_state": old_state.value, "new_state": new_state.value, "actor": actor,
-    })
+    hooks.fire(
+        HookEvent.on_state_change,
+        {
+            "task_id": task_id,
+            "old_state": old_state.value,
+            "new_state": new_state.value,
+            "actor": actor,
+        },
+    )
     if new_state == WorkItemState.completed:
         hooks.fire(HookEvent.on_execution_complete, {"task_id": task_id, "actor": actor})
     if new_state == WorkItemState.rework_required:
@@ -264,8 +277,7 @@ def block_work_item(engine, task_id: int, reason: str, *, actor: Optional[str] =
         session.add(item)
         session.commit()
 
-        _log_activity(session, task_id, ActivityAction.blocked,
-                      detail=reason, actor=actor)
+        _log_activity(session, task_id, ActivityAction.blocked, detail=reason, actor=actor)
         session.refresh(item)
 
     hooks.fire(HookEvent.on_blocked, {"task_id": task_id, "reason": reason, "actor": actor})
@@ -308,6 +320,7 @@ def get_child_progress(engine, parent_id: int) -> tuple[int, int]:
 
 # --- Assignment CRUD ----------------------------------------------------------
 
+
 def create_assignment(
     engine,
     task_id: int,
@@ -327,14 +340,20 @@ def create_assignment(
         session.add(assignment)
         session.commit()
 
-        _log_activity(session, task_id, ActivityAction.assigned,
-                      detail=f"{executor} ({executor_type.value})", actor=actor)
+        _log_activity(
+            session, task_id, ActivityAction.assigned, detail=f"{executor} ({executor_type.value})", actor=actor
+        )
         session.refresh(assignment)
 
-    hooks.fire(HookEvent.on_assigned, {
-        "task_id": task_id, "executor": executor,
-        "executor_type": executor_type.value, "actor": actor,
-    })
+    hooks.fire(
+        HookEvent.on_assigned,
+        {
+            "task_id": task_id,
+            "executor": executor,
+            "executor_type": executor_type.value,
+            "actor": actor,
+        },
+    )
     return assignment
 
 
@@ -346,11 +365,7 @@ def get_assignments(engine, task_id: int) -> list[Assignment]:
 
 def get_current_assignment(engine, task_id: int) -> Optional[Assignment]:
     with Session(engine) as session:
-        stmt = (
-            select(Assignment)
-            .where(Assignment.task_id == task_id)
-            .order_by(col(Assignment.assigned_at).desc())
-        )
+        stmt = select(Assignment).where(Assignment.task_id == task_id).order_by(col(Assignment.assigned_at).desc())
         return session.exec(stmt).first()
 
 
@@ -367,23 +382,20 @@ def list_items_by_executor(engine, executor: str) -> list[WorkItem]:
         result = []
         for tid in task_ids:
             latest = session.exec(
-                select(Assignment)
-                .where(Assignment.task_id == tid)
-                .order_by(col(Assignment.assigned_at).desc())
+                select(Assignment).where(Assignment.task_id == tid).order_by(col(Assignment.assigned_at).desc())
             ).first()
             if latest and latest.executor == executor:
                 item = session.exec(
-                    select(WorkItem)
-                    .where(WorkItem.task_id == tid)
-                    .options(selectinload(WorkItem.repository))  # type: ignore[arg-type]
+                    select(WorkItem).where(WorkItem.task_id == tid).options(selectinload(WorkItem.repository))  # type: ignore[arg-type]
                 ).first()
                 if item:
                     result.append(item)
-        result.sort(key=lambda x: x.task_id)
+        result.sort(key=lambda x: x.task_id or 0)
         return result
 
 
 # --- ExecutionRecord CRUD -----------------------------------------------------
+
 
 def create_execution_record(
     engine,
@@ -410,8 +422,9 @@ def create_execution_record(
         session.add(record)
         session.commit()
 
-        _log_activity(session, task_id, ActivityAction.execution_logged,
-                      detail=f"{status.value} by {executor}", actor=actor)
+        _log_activity(
+            session, task_id, ActivityAction.execution_logged, detail=f"{status.value} by {executor}", actor=actor
+        )
         session.refresh(record)
         return record
 
@@ -423,6 +436,7 @@ def get_execution_records(engine, task_id: int) -> list[ExecutionRecord]:
 
 
 # --- Review CRUD --------------------------------------------------------------
+
 
 def create_review(
     engine,
@@ -445,14 +459,21 @@ def create_review(
         session.add(review)
         session.commit()
 
-        _log_activity(session, task_id, ActivityAction.review_submitted,
-                      detail=f"{decision.value} by {reviewer}", actor=actor)
+        _log_activity(
+            session, task_id, ActivityAction.review_submitted, detail=f"{decision.value} by {reviewer}", actor=actor
+        )
         session.refresh(review)
 
-    hooks.fire(HookEvent.on_review_submitted, {
-        "task_id": task_id, "reviewer": reviewer,
-        "decision": decision.value, "note": note, "actor": actor,
-    })
+    hooks.fire(
+        HookEvent.on_review_submitted,
+        {
+            "task_id": task_id,
+            "reviewer": reviewer,
+            "decision": decision.value,
+            "note": note,
+            "actor": actor,
+        },
+    )
     return review
 
 
@@ -463,6 +484,7 @@ def get_reviews(engine, task_id: int) -> list[Review]:
 
 
 # --- Attachment CRUD ----------------------------------------------------------
+
 
 def create_attachment(engine, task_id: int, url_or_path: str, *, label: Optional[str] = None) -> Attachment:
     with Session(engine) as session:
@@ -480,6 +502,7 @@ def get_attachments(engine, task_id: int) -> list[Attachment]:
 
 
 # --- Activity Log -------------------------------------------------------------
+
 
 def _log_activity(
     session: Session,

@@ -65,6 +65,7 @@ def _parse_id(raw: str) -> int:
 
 # --- Work Items ---------------------------------------------------------------
 
+
 @app.command()
 def create_issue(
     priority: str = typer.Option("medium", "--priority", "-p", help="Priority: low, medium, high, urgent"),
@@ -92,6 +93,7 @@ def view_issue(issue_id: str = typer.Argument(help="Work item ID (e.g. WI-1 or 1
 
 
 # --- State Engine -------------------------------------------------------------
+
 
 @app.command()
 def update_status(
@@ -124,6 +126,7 @@ def unblock(
 
 # --- Assignments --------------------------------------------------------------
 
+
 @app.command()
 def assign(
     issue_id: str = typer.Argument(help="Work item ID"),
@@ -152,6 +155,7 @@ def agent_tasks(
 
 # --- Execution Records --------------------------------------------------------
 
+
 @app.command()
 def log_run(
     issue_id: str = typer.Argument(help="Work item ID"),
@@ -164,9 +168,13 @@ def log_run(
 ):
     """Log an execution record for a work item."""
     _log_run(
-        _parse_id(issue_id), executor, status,
-        branch=branch, commit=commit,
-        logs_ref=logs_ref, artifact_ref=artifact_ref,
+        _parse_id(issue_id),
+        executor,
+        status,
+        branch=branch,
+        commit=commit,
+        logs_ref=logs_ref,
+        artifact_ref=artifact_ref,
     )
 
 
@@ -179,6 +187,7 @@ def runs(
 
 
 # --- Reviews ------------------------------------------------------------------
+
 
 @app.command()
 def review_queue():
@@ -208,6 +217,7 @@ def request_changes(
 
 # --- Session Continuity -------------------------------------------------------
 
+
 @app.command()
 def status():
     """Overview of where things stand across all work items."""
@@ -234,6 +244,7 @@ def resume():
 
 # --- Attachments --------------------------------------------------------------
 
+
 @app.command()
 def attach(
     issue_id: str = typer.Argument(help="Work item ID"),
@@ -253,6 +264,7 @@ def list_attachments(
 
 
 # --- Task Hierarchy -----------------------------------------------------------
+
 
 @app.command()
 def add_task(
@@ -275,6 +287,7 @@ def list_tasks(
 
 
 # --- Repositories -------------------------------------------------------------
+
 
 @app.command()
 def list_repos(
@@ -316,6 +329,7 @@ def remove_repo(repo_name: str = typer.Argument(help="Repository name to remove"
 
 
 # --- Migration ----------------------------------------------------------------
+
 
 @app.command()
 def migrate_issues():

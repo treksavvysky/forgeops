@@ -13,6 +13,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 # --- Enums -------------------------------------------------------------------
 
+
 class RepoStatus(str, enum.Enum):
     active = "active"
     archived = "archived"
@@ -65,6 +66,7 @@ class ActivityAction(str, enum.Enum):
 
 # --- Repository ---------------------------------------------------------------
 
+
 class Repository(SQLModel, table=True):
     __tablename__ = "repositories"
 
@@ -80,6 +82,7 @@ class Repository(SQLModel, table=True):
 
 
 # --- WorkItem -----------------------------------------------------------------
+
 
 class WorkItem(SQLModel, table=True):
     __tablename__ = "work_items"
@@ -102,6 +105,7 @@ class WorkItem(SQLModel, table=True):
 
 # --- Assignment ---------------------------------------------------------------
 
+
 class Assignment(SQLModel, table=True):
     __tablename__ = "assignments"
 
@@ -113,6 +117,7 @@ class Assignment(SQLModel, table=True):
 
 
 # --- ExecutionRecord ----------------------------------------------------------
+
 
 class ExecutionRecord(SQLModel, table=True):
     __tablename__ = "execution_records"
@@ -130,6 +135,7 @@ class ExecutionRecord(SQLModel, table=True):
 
 # --- Review -------------------------------------------------------------------
 
+
 class Review(SQLModel, table=True):
     __tablename__ = "reviews"
 
@@ -143,6 +149,7 @@ class Review(SQLModel, table=True):
 
 # --- ActivityLog --------------------------------------------------------------
 
+
 class ActivityLog(SQLModel, table=True):
     __tablename__ = "activity_log"
 
@@ -155,6 +162,7 @@ class ActivityLog(SQLModel, table=True):
 
 
 # --- Attachment ---------------------------------------------------------------
+
 
 class Attachment(SQLModel, table=True):
     __tablename__ = "attachments"

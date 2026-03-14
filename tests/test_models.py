@@ -18,14 +18,21 @@ from models import (
 
 
 class TestEnums(unittest.TestCase):
-
     def test_repo_status_values(self):
         self.assertEqual(RepoStatus.active.value, "active")
         self.assertEqual(RepoStatus.archived.value, "archived")
 
     def test_work_item_states(self):
-        expected = {"queued", "assigned", "executing", "completed",
-                    "awaiting_review", "accepted", "rework_required", "closed"}
+        expected = {
+            "queued",
+            "assigned",
+            "executing",
+            "completed",
+            "awaiting_review",
+            "accepted",
+            "rework_required",
+            "closed",
+        }
         self.assertEqual({s.value for s in WorkItemState}, expected)
 
     def test_priority_levels(self):
@@ -46,7 +53,6 @@ class TestEnums(unittest.TestCase):
 
 
 class TestModelDefaults(unittest.TestCase):
-
     def test_repository_defaults(self):
         r = Repository(name="test")
         self.assertEqual(r.status, RepoStatus.active)

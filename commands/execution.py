@@ -17,15 +17,17 @@ def _detect_git_info() -> tuple[Optional[str], Optional[str]]:
     branch = None
     commit = None
     try:
-        branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
+        branch = (
+            subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL)
+            .decode()
+            .strip()
+        )
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
     try:
-        commit = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
+        commit = (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+        )
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
     return branch, commit
@@ -59,9 +61,14 @@ def log_run(
         branch, commit = _detect_git_info()
 
     record = create_execution_record(
-        engine, task_id, executor, status,
-        branch=branch, commit=commit,
-        logs_ref=logs_ref, artifact_ref=artifact_ref,
+        engine,
+        task_id,
+        executor,
+        status,
+        branch=branch,
+        commit=commit,
+        logs_ref=logs_ref,
+        artifact_ref=artifact_ref,
         actor=executor,
     )
     console.print(f"[green]Run {record.run_id} logged for WI-{task_id} ({status.value})[/green]")

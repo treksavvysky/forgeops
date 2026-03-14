@@ -5,7 +5,6 @@ Or via entry point: forgeops-mcp
 """
 
 import json
-import sys
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -29,6 +28,7 @@ def _get_engine():
     global _engine
     if _engine is None:
         from core.database import create_db_and_tables
+
         _engine = create_db_and_tables()
     return _engine
 
@@ -88,6 +88,7 @@ def forgeops_get_work_item(task_id: int) -> str:
     """Get a work item by ID."""
     try:
         from core.database import get_work_item
+
         item = get_work_item(_get_engine(), task_id)
         if not item:
             return _error("NOT_FOUND", f"Work item {task_id} not found")
@@ -114,7 +115,8 @@ def forgeops_create_work_item(
         from models import Priority
 
         item = create_work_item(
-            _get_engine(), title,
+            _get_engine(),
+            title,
             repo_name=repo_name,
             description=description,
             priority=Priority(priority),
@@ -188,7 +190,10 @@ def forgeops_transition(
         from models import WorkItemState
 
         item = transition_work_item(
-            _get_engine(), task_id, WorkItemState(state), actor=actor,
+            _get_engine(),
+            task_id,
+            WorkItemState(state),
+            actor=actor,
         )
         refreshed = get_work_item(_get_engine(), item.task_id)
         return _success(item=_serialize_item(refreshed))
@@ -211,6 +216,7 @@ def forgeops_block(
     """Block a work item."""
     try:
         from core.database import block_work_item, get_work_item
+
         block_work_item(_get_engine(), task_id, reason, actor=actor)
         refreshed = get_work_item(_get_engine(), task_id)
         return _success(item=_serialize_item(refreshed))
@@ -231,6 +237,7 @@ def forgeops_unblock(
     """Unblock a work item."""
     try:
         from core.database import unblock_work_item, get_work_item
+
         unblock_work_item(_get_engine(), task_id, actor=actor)
         refreshed = get_work_item(_get_engine(), task_id)
         return _success(item=_serialize_item(refreshed))
@@ -263,15 +270,21 @@ def forgeops_assign(
             return _error("NOT_FOUND", f"Work item {task_id} not found")
 
         assignment = create_assignment(
-            _get_engine(), task_id, executor, ExecutorType(executor_type), actor=actor,
+            _get_engine(),
+            task_id,
+            executor,
+            ExecutorType(executor_type),
+            actor=actor,
         )
-        return _success(assignment={
-            "assignment_id": assignment.assignment_id,
-            "task_id": assignment.task_id,
-            "executor": assignment.executor,
-            "executor_type": assignment.executor_type.value,
-            "assigned_at": str(assignment.assigned_at),
-        })
+        return _success(
+            assignment={
+                "assignment_id": assignment.assignment_id,
+                "task_id": assignment.task_id,
+                "executor": assignment.executor,
+                "executor_type": assignment.executor_type.value,
+                "assigned_at": str(assignment.assigned_at),
+            }
+        )
     except ValueError as e:
         return _error("VALIDATION_ERROR", str(e))
     except Exception as e:
@@ -286,6 +299,7 @@ def forgeops_my_items(executor: str) -> str:
     """Get work items for an executor."""
     try:
         from core.database import list_items_by_executor
+
         items = list_items_by_executor(_get_engine(), executor)
         return _success(items=[_serialize_item(i) for i in items], count=len(items))
     except Exception as e:
@@ -319,20 +333,27 @@ def forgeops_log_run(
             return _error("NOT_FOUND", f"Work item {task_id} not found")
 
         record = create_execution_record(
-            _get_engine(), task_id, executor, ExecutionStatus(status),
-            branch=branch, commit=commit,
-            logs_ref=logs_ref, artifact_ref=artifact_ref,
+            _get_engine(),
+            task_id,
+            executor,
+            ExecutionStatus(status),
+            branch=branch,
+            commit=commit,
+            logs_ref=logs_ref,
+            artifact_ref=artifact_ref,
             actor=actor,
         )
-        return _success(run={
-            "run_id": record.run_id,
-            "task_id": record.task_id,
-            "executor": record.executor,
-            "status": record.status.value,
-            "branch": record.branch,
-            "commit": record.commit,
-            "created_at": str(record.created_at),
-        })
+        return _success(
+            run={
+                "run_id": record.run_id,
+                "task_id": record.task_id,
+                "executor": record.executor,
+                "status": record.status.value,
+                "branch": record.branch,
+                "commit": record.commit,
+                "created_at": str(record.created_at),
+            }
+        )
     except ValueError as e:
         return _error("VALIDATION_ERROR", str(e))
     except Exception as e:
@@ -347,15 +368,21 @@ def forgeops_list_runs(task_id: int) -> str:
     """List execution records for a work item."""
     try:
         from core.database import get_execution_records
+
         records = get_execution_records(_get_engine(), task_id)
-        return _success(runs=[
-            {
-                "run_id": r.run_id, "executor": r.executor,
-                "status": r.status.value, "branch": r.branch,
-                "commit": r.commit, "created_at": str(r.created_at),
-            }
-            for r in records
-        ])
+        return _success(
+            runs=[
+                {
+                    "run_id": r.run_id,
+                    "executor": r.executor,
+                    "status": r.status.value,
+                    "branch": r.branch,
+                    "commit": r.commit,
+                    "created_at": str(r.created_at),
+                }
+                for r in records
+            ]
+        )
     except Exception as e:
         return _error("LIST_RUNS_ERROR", str(e))
 
@@ -384,17 +411,23 @@ def forgeops_submit_review(
             return _error("NOT_FOUND", f"Work item {task_id} not found")
 
         review = create_review(
-            _get_engine(), task_id, reviewer, ReviewDecision(decision),
-            note=note, actor=actor,
+            _get_engine(),
+            task_id,
+            reviewer,
+            ReviewDecision(decision),
+            note=note,
+            actor=actor,
         )
-        return _success(review={
-            "review_id": review.review_id,
-            "task_id": review.task_id,
-            "reviewer": review.reviewer,
-            "decision": review.decision.value,
-            "note": review.note,
-            "created_at": str(review.created_at),
-        })
+        return _success(
+            review={
+                "review_id": review.review_id,
+                "task_id": review.task_id,
+                "reviewer": review.reviewer,
+                "decision": review.decision.value,
+                "note": review.note,
+                "created_at": str(review.created_at),
+            }
+        )
     except ValueError as e:
         return _error("VALIDATION_ERROR", str(e))
     except Exception as e:
@@ -409,15 +442,20 @@ def forgeops_list_reviews(task_id: int) -> str:
     """List reviews for a work item."""
     try:
         from core.database import get_reviews
+
         reviews = get_reviews(_get_engine(), task_id)
-        return _success(reviews=[
-            {
-                "review_id": rv.review_id, "reviewer": rv.reviewer,
-                "decision": rv.decision.value, "note": rv.note,
-                "created_at": str(rv.created_at),
-            }
-            for rv in reviews
-        ])
+        return _success(
+            reviews=[
+                {
+                    "review_id": rv.review_id,
+                    "reviewer": rv.reviewer,
+                    "decision": rv.decision.value,
+                    "note": rv.note,
+                    "created_at": str(rv.created_at),
+                }
+                for rv in reviews
+            ]
+        )
     except Exception as e:
         return _error("LIST_REVIEWS_ERROR", str(e))
 
@@ -443,13 +481,15 @@ def forgeops_attach(
             return _error("NOT_FOUND", f"Work item {task_id} not found")
 
         att = create_attachment(_get_engine(), task_id, url_or_path, label=label)
-        return _success(attachment={
-            "attachment_id": att.attachment_id,
-            "task_id": att.task_id,
-            "url_or_path": att.url_or_path,
-            "label": att.label,
-            "created_at": str(att.created_at),
-        })
+        return _success(
+            attachment={
+                "attachment_id": att.attachment_id,
+                "task_id": att.task_id,
+                "url_or_path": att.url_or_path,
+                "label": att.label,
+                "created_at": str(att.created_at),
+            }
+        )
     except Exception as e:
         return _error("ATTACH_ERROR", str(e))
 
@@ -465,15 +505,22 @@ def forgeops_list_repos(include_archived: bool = False) -> str:
     """List repositories."""
     try:
         from core.database import get_repositories
+
         repos = get_repositories(_get_engine(), include_archived=include_archived)
-        return _success(repositories=[
-            {
-                "repo_id": r.repo_id, "name": r.name, "org": r.org,
-                "default_branch": r.default_branch, "status": r.status.value,
-                "url": r.url, "description": r.description,
-            }
-            for r in repos
-        ])
+        return _success(
+            repositories=[
+                {
+                    "repo_id": r.repo_id,
+                    "name": r.name,
+                    "org": r.org,
+                    "default_branch": r.default_branch,
+                    "status": r.status.value,
+                    "url": r.url,
+                    "description": r.description,
+                }
+                for r in repos
+            ]
+        )
     except Exception as e:
         return _error("LIST_REPOS_ERROR", str(e))
 
@@ -492,14 +539,23 @@ def forgeops_add_repo(
     """Add a repository."""
     try:
         from core.database import add_repository
+
         repo = add_repository(
-            _get_engine(), name,
-            org=org, default_branch=default_branch, url=url, description=description,
+            _get_engine(),
+            name,
+            org=org,
+            default_branch=default_branch,
+            url=url,
+            description=description,
         )
-        return _success(repository={
-            "repo_id": repo.repo_id, "name": repo.name,
-            "org": repo.org, "status": repo.status.value,
-        })
+        return _success(
+            repository={
+                "repo_id": repo.repo_id,
+                "name": repo.name,
+                "org": repo.org,
+                "status": repo.status.value,
+            }
+        )
     except Exception as e:
         return _error("ADD_REPO_ERROR", str(e))
 
@@ -546,15 +602,21 @@ def forgeops_activity(
     """Get activity log."""
     try:
         from core.database import get_activity_log
+
         entries = get_activity_log(_get_engine(), task_id=task_id, limit=limit)
-        return _success(entries=[
-            {
-                "log_id": e.log_id, "task_id": e.task_id,
-                "action": e.action.value, "detail": e.detail,
-                "actor": e.actor, "created_at": str(e.created_at),
-            }
-            for e in entries
-        ])
+        return _success(
+            entries=[
+                {
+                    "log_id": e.log_id,
+                    "task_id": e.task_id,
+                    "action": e.action.value,
+                    "detail": e.detail,
+                    "actor": e.actor,
+                    "created_at": str(e.created_at),
+                }
+                for e in entries
+            ]
+        )
     except Exception as e:
         return _error("ACTIVITY_ERROR", str(e))
 
@@ -567,6 +629,7 @@ def forgeops_children(parent_id: int) -> str:
     """Get children and progress."""
     try:
         from core.database import get_children, get_child_progress
+
         children = get_children(_get_engine(), parent_id)
         done, total = get_child_progress(_get_engine(), parent_id)
         return _success(

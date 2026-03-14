@@ -19,10 +19,13 @@ class TestAPI(unittest.TestCase):
         # Reimport to pick up env changes
         import importlib
         import config
+
         importlib.reload(config)
         import core.database
+
         importlib.reload(core.database)
         import api as api_mod
+
         importlib.reload(api_mod)
         self.app = api_mod.app
         self.client = TestClient(self.app)
@@ -247,10 +250,13 @@ class TestAPIAuth(unittest.TestCase):
         os.environ["API_BEARER_TOKEN"] = "test-secret-token"
         import importlib
         import config
+
         importlib.reload(config)
         import core.database
+
         importlib.reload(core.database)
         import api as api_mod
+
         importlib.reload(api_mod)
         self.app = api_mod.app
         self.client = TestClient(self.app)

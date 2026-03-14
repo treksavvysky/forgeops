@@ -141,8 +141,8 @@ Layered on top of the Phase 2 state engine. The engine already records state cha
 - [ ] **Expanded test suite:**
     - [x] Integration tests for CLI commands. *(done 2026-03-12, `0ced06b`)*
     - [x] Tests for new ledger capabilities (assignments, states, artifacts, reviews). *(done 2026-03-13)*
-    - [ ] Property-based testing for data validation.
-- [ ] **GitHub Actions CI:** Automate linting (`ruff`), type-checking (`mypy`), and testing on every push.
+    - [x] Property-based testing for data validation. *(done 2026-03-14, `tests/test_property.py`)*
+- [x] **GitHub Actions CI:** Automate linting (`ruff`), type-checking (`mypy`), and testing on every push. *(done 2026-03-14, `.github/workflows/ci.yml`)*
 - [ ] **Dockerization:** Dockerfile for the API and CLI.
 
 ### Future Ideas

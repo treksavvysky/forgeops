@@ -2,8 +2,6 @@
 
 import json
 from datetime import UTC, datetime
-from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -13,7 +11,6 @@ from config import BASE_DIR
 from core.database import (
     create_db_and_tables,
     get_activity_log,
-    get_work_item,
     list_work_items,
 )
 from models import WorkItemState

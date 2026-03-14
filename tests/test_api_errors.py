@@ -15,10 +15,13 @@ class TestAPIErrors(unittest.TestCase):
         os.environ["FORGEOPS_DB_PATH"] = self.TEST_DB
         os.environ.pop("API_BEARER_TOKEN", None)
         import config
+
         importlib.reload(config)
         import core.database
+
         importlib.reload(core.database)
         import api as api_mod
+
         importlib.reload(api_mod)
         self.client = TestClient(api_mod.app)
 

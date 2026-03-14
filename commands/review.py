@@ -9,7 +9,6 @@ from core.database import (
     create_db_and_tables,
     create_review,
     get_execution_records,
-    get_reviews,
     get_work_item,
     list_work_items,
     transition_work_item,

@@ -7,6 +7,7 @@ import importlib
 
 os.environ["FORGEOPS_DB_PATH"] = "test_mcp_errors.db"
 import config
+
 importlib.reload(config)
 
 import mcp_server
@@ -21,7 +22,6 @@ from mcp_server import (
     forgeops_unblock,
     forgeops_update_work_item,
     forgeops_attach,
-    forgeops_get_work_item,
 )
 
 
@@ -38,6 +38,7 @@ class TestMCPErrors(unittest.TestCase):
         os.environ["FORGEOPS_DB_PATH"] = self.TEST_DB
         importlib.reload(config)
         import core.database
+
         importlib.reload(core.database)
 
     def tearDown(self):
@@ -133,6 +134,7 @@ class TestMCPErrors(unittest.TestCase):
 
     def test_concurrency_guard_via_mcp(self):
         from mcp_server import forgeops_add_repo
+
         forgeops_add_repo("guard-repo")
         tid1 = _parse(forgeops_create_work_item("Item 1", repo_name="guard-repo"))["item"]["task_id"]
         tid2 = _parse(forgeops_create_work_item("Item 2", repo_name="guard-repo"))["item"]["task_id"]

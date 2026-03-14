@@ -50,9 +50,11 @@ class HookRegistry:
 
     def on(self, event: HookEvent):
         """Decorator to register a hook handler."""
+
         def decorator(fn: Callable) -> Callable:
             self.subscribe(event, fn)
             return fn
+
         return decorator
 
     def fire(self, event: HookEvent, payload: dict[str, Any]) -> None:
@@ -63,7 +65,8 @@ class HookRegistry:
             except Exception:
                 logger.exception(
                     "Hook handler %s failed for event %s",
-                    handler.__name__, event.value,
+                    handler.__name__,
+                    event.value,
                 )
 
     def clear(self, event: HookEvent | None = None) -> None:

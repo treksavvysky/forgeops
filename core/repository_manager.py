@@ -9,7 +9,6 @@ from core.database import (
     remove_repository,
     update_repository,
 )
-from models import RepoStatus
 
 
 class RepositoryManager:
@@ -17,7 +16,7 @@ class RepositoryManager:
         self.engine = engine
 
     def validate_repo_name(self, repo_name: str) -> tuple[bool, str]:
-        if not re.match(r'^[a-zA-Z0-9_-]+$', repo_name):
+        if not re.match(r"^[a-zA-Z0-9_-]+$", repo_name):
             return False, "Repository name can only contain letters, numbers, hyphens, and underscores"
         if len(repo_name) < 2:
             return False, "Repository name must be at least 2 characters long"

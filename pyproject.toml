@@ -23,3 +23,29 @@ test = [
     "httpx",
     "hypothesis",
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "ruff>=0.15.6",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_mcp*.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["core.database", "mcp_server", "api", "commands.*"]
+disable_error_code = ["arg-type", "assignment", "var-annotated"]

@@ -19,7 +19,6 @@ from models import Priority, RepoStatus, WorkItemState
 
 
 class TestDatabaseLayer(unittest.TestCase):
-
     TEST_DB = "test_phase1.db"
 
     def setUp(self):

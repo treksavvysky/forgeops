@@ -43,7 +43,10 @@ class TestHookRegistry(unittest.TestCase):
 
     def test_unsubscribe(self):
         received = []
-        handler = lambda p: received.append(p)
+
+        def handler(p):
+            received.append(p)
+
         self.registry.subscribe(HookEvent.on_state_change, handler)
         self.registry.unsubscribe(HookEvent.on_state_change, handler)
         self.registry.fire(HookEvent.on_state_change, {"task_id": 1})
@@ -129,9 +132,13 @@ class TestHooksIntegration(unittest.TestCase):
     def test_rework_hook_fires(self):
         hooks.subscribe(HookEvent.on_rework, lambda p: self.received.append(p))
         item = create_work_item(self.engine, "Rework test")
-        for s in [WorkItemState.assigned, WorkItemState.executing,
-                   WorkItemState.completed, WorkItemState.awaiting_review,
-                   WorkItemState.rework_required]:
+        for s in [
+            WorkItemState.assigned,
+            WorkItemState.executing,
+            WorkItemState.completed,
+            WorkItemState.awaiting_review,
+            WorkItemState.rework_required,
+        ]:
             transition_work_item(self.engine, item.task_id, s)
         self.assertEqual(len(self.received), 1)
 

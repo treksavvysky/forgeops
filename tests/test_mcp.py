@@ -9,10 +9,10 @@ os.environ["FORGEOPS_DB_PATH"] = "test_mcp.db"
 
 import importlib
 import config
+
 importlib.reload(config)
 
 from mcp_server import (
-    _get_engine,
     forgeops_list_work_items,
     forgeops_get_work_item,
     forgeops_create_work_item,
@@ -50,6 +50,7 @@ class TestMCPTools(unittest.TestCase):
         os.environ["FORGEOPS_DB_PATH"] = self.TEST_DB
         importlib.reload(config)
         import core.database
+
         importlib.reload(core.database)
 
     def tearDown(self):

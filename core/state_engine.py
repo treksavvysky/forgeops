@@ -71,4 +71,4 @@ def check_repo_concurrency(engine, repo_id: int | None, task_id: int) -> None:
         if blocking:
             repo = session.get(Repository, repo_id)
             repo_name = repo.name if repo else f"repo_id={repo_id}"
-            raise RepoConcurrencyError(repo_name, blocking.task_id)
+            raise RepoConcurrencyError(repo_name, blocking.task_id or 0)

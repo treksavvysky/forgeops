@@ -15,7 +15,6 @@ from models import RepoStatus
 
 
 class CommandTestBase(unittest.TestCase):
-
     TEST_DB = "test_cmd_phase1.db"
 
     def setUp(self):
@@ -36,7 +35,6 @@ class CommandTestBase(unittest.TestCase):
 
 
 class TestListIssuesCommand(CommandTestBase):
-
     def test_list_issues_shows_items(self):
         add_repository(self.engine, "test-repo")
         create_work_item(self.engine, "First item", repo_name="test-repo")
@@ -92,7 +90,6 @@ class TestListIssuesCommand(CommandTestBase):
 
 
 class TestViewIssueCommand(CommandTestBase):
-
     def test_view_existing_item(self):
         add_repository(self.engine, "test-repo")
         create_work_item(self.engine, "Test item", repo_name="test-repo", description="Detailed desc")
@@ -138,7 +135,6 @@ class TestViewIssueCommand(CommandTestBase):
 
 
 class TestListReposCommand(CommandTestBase):
-
     def test_list_repos(self):
         add_repository(self.engine, "alpha")
         add_repository(self.engine, "bravo")
@@ -167,7 +163,6 @@ class TestListReposCommand(CommandTestBase):
 
 
 class TestAddRepoCommand(CommandTestBase):
-
     def test_add_new_repo(self):
         from commands.add_repo import add_repo
 
@@ -202,7 +197,6 @@ class TestAddRepoCommand(CommandTestBase):
 
 
 class TestUpdateRepoCommand(CommandTestBase):
-
     def test_update_repo(self):
         add_repository(self.engine, "updatable")
 
@@ -225,7 +219,6 @@ class TestUpdateRepoCommand(CommandTestBase):
 
 
 class TestRemoveRepoCommand(CommandTestBase):
-
     def test_remove_repo(self):
         add_repository(self.engine, "doomed")
 
@@ -248,7 +241,6 @@ class TestRemoveRepoCommand(CommandTestBase):
 
 
 class TestMigrateCommand(CommandTestBase):
-
     def test_migrate_imports_legacy_data(self):
         import json
         import shutil
@@ -258,22 +250,27 @@ class TestMigrateCommand(CommandTestBase):
         repos_file = "test_legacy_repos.json"
         os.makedirs(issues_dir, exist_ok=True)
         with open(os.path.join(issues_dir, "ISSUE-001.json"), "w") as f:
-            json.dump({
-                "id": "ISSUE-001",
-                "title": "Legacy issue",
-                "description": "From JSON",
-                "repository": "legacy-repo",
-                "created_at": "2026-01-01T00:00:00Z",
-            }, f)
+            json.dump(
+                {
+                    "id": "ISSUE-001",
+                    "title": "Legacy issue",
+                    "description": "From JSON",
+                    "repository": "legacy-repo",
+                    "created_at": "2026-01-01T00:00:00Z",
+                },
+                f,
+            )
         with open(repos_file, "w") as f:
             json.dump({"repositories": ["legacy-repo"]}, f)
 
         from commands.migrate_issues import migrate_issues
 
-        with patch("commands.migrate_issues.create_db_and_tables", return_value=self.engine), \
-             patch("commands.migrate_issues.LEGACY_ISSUES_DIR", issues_dir), \
-             patch("commands.migrate_issues.LEGACY_REPOS_FILE", repos_file), \
-             patch("commands.migrate_issues.LEGACY_TASK_LISTS_DIR", "nonexistent"):
+        with (
+            patch("commands.migrate_issues.create_db_and_tables", return_value=self.engine),
+            patch("commands.migrate_issues.LEGACY_ISSUES_DIR", issues_dir),
+            patch("commands.migrate_issues.LEGACY_REPOS_FILE", repos_file),
+            patch("commands.migrate_issues.LEGACY_TASK_LISTS_DIR", "nonexistent"),
+        ):
             with patch("sys.stdout", new_callable=StringIO) as out:
                 migrate_issues()
         output = out.getvalue()

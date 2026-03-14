@@ -8,7 +8,6 @@ from core.repository_manager import RepositoryManager
 
 
 class TestRepositoryManager(unittest.TestCase):
-
     TEST_DB = "test_repo_mgr.db"
 
     def setUp(self):

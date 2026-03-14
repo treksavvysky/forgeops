@@ -25,20 +25,17 @@ from core.database import (
     list_items_by_executor,
     transition_work_item,
     unblock_work_item,
-    update_work_item,
 )
 from core.state_engine import (
     InvalidTransitionError,
     RepoConcurrencyError,
     TRANSITIONS,
-    check_repo_concurrency,
     validate_transition,
 )
 from models import (
     ActivityAction,
     ExecutionStatus,
     ExecutorType,
-    Priority,
     ReviewDecision,
     WorkItemState,
 )
@@ -137,7 +134,7 @@ class TestStateTransitionsDB(unittest.TestCase):
         self.assertIn(ActivityAction.state_change, actions)
 
     def test_repo_concurrency_guard(self):
-        repo = add_repository(self.engine, "guarded-repo")
+        add_repository(self.engine, "guarded-repo")
         item1 = create_work_item(self.engine, "Item 1", repo_name="guarded-repo")
         item2 = create_work_item(self.engine, "Item 2", repo_name="guarded-repo")
         # Move item1 to executing
@@ -167,9 +164,14 @@ class TestStateTransitionsDB(unittest.TestCase):
 
     def test_rework_loop(self):
         item = create_work_item(self.engine, "Rework test")
-        for s in [WorkItemState.assigned, WorkItemState.executing,
-                   WorkItemState.completed, WorkItemState.awaiting_review,
-                   WorkItemState.rework_required, WorkItemState.executing]:
+        for s in [
+            WorkItemState.assigned,
+            WorkItemState.executing,
+            WorkItemState.completed,
+            WorkItemState.awaiting_review,
+            WorkItemState.rework_required,
+            WorkItemState.executing,
+        ]:
             item = transition_work_item(self.engine, item.task_id, s)
         self.assertEqual(item.state, WorkItemState.executing)
 
@@ -202,7 +204,7 @@ class TestBlockMechanism(unittest.TestCase):
     def test_block_preserves_state(self):
         item = create_work_item(self.engine, "State preserved")
         transition_work_item(self.engine, item.task_id, WorkItemState.assigned)
-        blocked = block_work_item(self.engine, item.task_id, "reason")
+        block_work_item(self.engine, item.task_id, "reason")
         refreshed = get_work_item(self.engine, item.task_id)
         self.assertEqual(refreshed.state, WorkItemState.assigned)
         self.assertTrue(refreshed.is_blocked)
@@ -318,8 +320,12 @@ class TestExecutionRecords(unittest.TestCase):
     def test_create_and_get_record(self):
         item = create_work_item(self.engine, "Executed")
         record = create_execution_record(
-            self.engine, item.task_id, "agent-1", ExecutionStatus.success,
-            branch="main", commit="abc123",
+            self.engine,
+            item.task_id,
+            "agent-1",
+            ExecutionStatus.success,
+            branch="main",
+            commit="abc123",
         )
         self.assertEqual(record.executor, "agent-1")
         self.assertEqual(record.status, ExecutionStatus.success)
@@ -446,11 +452,15 @@ class TestTaskHierarchy(unittest.TestCase):
     def test_child_progress_partial(self):
         parent = create_work_item(self.engine, "Parent")
         c1 = create_work_item(self.engine, "Done child", parent_id=parent.task_id)
-        c2 = create_work_item(self.engine, "Open child", parent_id=parent.task_id)
+        create_work_item(self.engine, "Open child", parent_id=parent.task_id)
         # Move c1 to accepted (counts as done)
-        for s in [WorkItemState.assigned, WorkItemState.executing,
-                   WorkItemState.completed, WorkItemState.awaiting_review,
-                   WorkItemState.accepted]:
+        for s in [
+            WorkItemState.assigned,
+            WorkItemState.executing,
+            WorkItemState.completed,
+            WorkItemState.awaiting_review,
+            WorkItemState.accepted,
+        ]:
             transition_work_item(self.engine, c1.task_id, s)
         done, total = get_child_progress(self.engine, parent.task_id)
         self.assertEqual(done, 1)

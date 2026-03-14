@@ -10,7 +10,6 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException, Header
 from pydantic import BaseModel
 
-from config import API_HOST, API_PORT
 from core.database import (
     add_repository,
     block_work_item,
@@ -425,9 +424,14 @@ def create_run_endpoint(task_id: int, body: ExecutionRecordCreate, _=Depends(ver
     if not item:
         raise HTTPException(status_code=404, detail=f"Work item {task_id} not found")
     record = create_execution_record(
-        engine, task_id, body.executor, body.status,
-        branch=body.branch, commit=body.commit,
-        logs_ref=body.logs_ref, artifact_ref=body.artifact_ref,
+        engine,
+        task_id,
+        body.executor,
+        body.status,
+        branch=body.branch,
+        commit=body.commit,
+        logs_ref=body.logs_ref,
+        artifact_ref=body.artifact_ref,
         actor=body.actor,
     )
     return _serialize_execution_record(record)
@@ -447,8 +451,12 @@ def create_review_endpoint(task_id: int, body: ReviewCreate, _=Depends(verify_to
     if not item:
         raise HTTPException(status_code=404, detail=f"Work item {task_id} not found")
     review = create_review(
-        engine, task_id, body.reviewer, body.decision,
-        note=body.note, actor=body.actor,
+        engine,
+        task_id,
+        body.reviewer,
+        body.decision,
+        note=body.note,
+        actor=body.actor,
     )
     return _serialize_review(review)
 
@@ -500,6 +508,7 @@ def status_overview_endpoint(_=Depends(verify_token)):
 
 
 # --- Legacy aliases (backwards compat) ------------------------------------
+
 
 @app.get("/issues")
 def get_issues_legacy(

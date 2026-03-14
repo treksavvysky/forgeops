@@ -1,7 +1,5 @@
 """Assignment commands — assign, my-issues, agent-tasks."""
 
-from typing import Optional
-
 from rich.console import Console
 from rich.table import Table
 
@@ -58,7 +56,7 @@ def agent_tasks(executor: str) -> None:
 
 def _print_items(items: list, title: str) -> None:
     if not items:
-        console.print(f"No work items found for this executor.")
+        console.print("No work items found for this executor.")
         return
 
     table = Table(title=title)

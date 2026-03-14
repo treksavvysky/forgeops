@@ -18,7 +18,7 @@ def attach(task_id: int, url_or_path: str, *, label: Optional[str] = None) -> No
         console.print(f"[red]Work item WI-{task_id} not found.[/red]")
         return
 
-    att = create_attachment(engine, task_id, url_or_path, label=label)
+    create_attachment(engine, task_id, url_or_path, label=label)
     console.print(f"[green]Attachment added to WI-{task_id}:[/green] {url_or_path}")
 
 
