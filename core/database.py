@@ -211,6 +211,18 @@ def update_work_item(engine, task_id: int, **kwargs) -> Optional[WorkItem]:
         return item
 
 
+def delete_work_item(engine, task_id: int, *, actor: Optional[str] = None) -> bool:
+    """Delete a work item and its associated records."""
+    with Session(engine) as session:
+        item = session.get(WorkItem, task_id)
+        if not item:
+            return False
+        _log_activity(session, task_id, ActivityAction.state_change, detail="deleted", actor=actor)
+        session.delete(item)
+        session.commit()
+        return True
+
+
 def transition_work_item(
     engine,
     task_id: int,
@@ -269,6 +281,28 @@ def transition_work_item(
     if new_state == WorkItemState.rework_required:
         hooks.fire(HookEvent.on_rework, {"task_id": task_id, "actor": actor})
 
+    return item
+
+
+def fast_track_work_item(
+    engine,
+    task_id: int,
+    target_state: WorkItemState,
+    *,
+    actor: Optional[str] = None,
+) -> WorkItem:
+    """Fast-track a work item to a target state, stepping through all intermediate states."""
+    from core.state_engine import fast_track_transition
+
+    with Session(engine) as session:
+        item = session.get(WorkItem, task_id)
+        if not item:
+            raise ValueError(f"Work item {task_id} not found")
+        steps = fast_track_transition(item.state, target_state)
+
+    # Walk through each intermediate state using the normal transition
+    for step in steps:
+        item = transition_work_item(engine, task_id, step, actor=actor)
     return item
 
 

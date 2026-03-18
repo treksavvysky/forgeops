@@ -32,6 +32,8 @@ from core.database import (
     get_work_item,
     list_items_by_executor,
     list_work_items,
+    delete_work_item,
+    fast_track_work_item,
     remove_repository,
     transition_work_item,
     unblock_work_item,
@@ -302,10 +304,29 @@ def update_work_item_endpoint(task_id: int, body: WorkItemUpdate, _=Depends(veri
     return _serialize_work_item(get_work_item(engine, item.task_id))
 
 
+@app.delete("/work-items/{task_id}", status_code=204)
+def delete_work_item_endpoint(task_id: int, _=Depends(verify_token)):
+    if not delete_work_item(engine, task_id):
+        raise HTTPException(status_code=404, detail=f"Work item {task_id} not found")
+
+
 @app.post("/work-items/{task_id}/transition")
 def transition_work_item_endpoint(task_id: int, body: WorkItemTransition, _=Depends(verify_token)):
     try:
         item = transition_work_item(engine, task_id, body.state, actor=body.actor)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except InvalidTransitionError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except RepoConcurrencyError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return _serialize_work_item(get_work_item(engine, item.task_id))
+
+
+@app.post("/work-items/{task_id}/fast-track")
+def fast_track_work_item_endpoint(task_id: int, body: WorkItemTransition, _=Depends(verify_token)):
+    try:
+        item = fast_track_work_item(engine, task_id, body.state, actor=body.actor)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except InvalidTransitionError as e:

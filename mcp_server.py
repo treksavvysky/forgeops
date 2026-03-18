@@ -133,17 +133,18 @@ def forgeops_create_work_item(
 
 @server.tool(
     name="forgeops_update_work_item",
-    description="Update a work item's title, description, or priority.",
+    description="Update a work item's title, description, priority, or repository.",
 )
 def forgeops_update_work_item(
     task_id: int,
     title: Optional[str] = None,
     description: Optional[str] = None,
     priority: Optional[str] = None,
+    repo_name: Optional[str] = None,
 ) -> str:
     """Update work item fields."""
     try:
-        from core.database import update_work_item, get_work_item
+        from core.database import update_work_item, get_work_item, get_repository
         from models import Priority
 
         kwargs = {}
@@ -153,6 +154,11 @@ def forgeops_update_work_item(
             kwargs["description"] = description
         if priority is not None:
             kwargs["priority"] = Priority(priority)
+        if repo_name is not None:
+            repo = get_repository(_get_engine(), repo_name)
+            if not repo:
+                return _error("NOT_FOUND", f"Repository '{repo_name}' not found")
+            kwargs["repo_id"] = repo.repo_id
 
         if not kwargs:
             return _error("VALIDATION_ERROR", "No fields to update")
@@ -166,6 +172,26 @@ def forgeops_update_work_item(
         return _error("VALIDATION_ERROR", str(e))
     except Exception as e:
         return _error("UPDATE_ERROR", str(e))
+
+
+@server.tool(
+    name="forgeops_delete_work_item",
+    description="Delete a work item permanently. Use with caution — this cannot be undone.",
+)
+def forgeops_delete_work_item(
+    task_id: int,
+    actor: Optional[str] = None,
+) -> str:
+    """Delete a work item."""
+    try:
+        from core.database import delete_work_item
+
+        deleted = delete_work_item(_get_engine(), task_id, actor=actor)
+        if not deleted:
+            return _error("NOT_FOUND", f"Work item {task_id} not found")
+        return _success(deleted_task_id=task_id)
+    except Exception as e:
+        return _error("DELETE_ERROR", str(e))
 
 
 # --- State Engine ---------------------------------------------------------
@@ -190,6 +216,39 @@ def forgeops_transition(
         from models import WorkItemState
 
         item = transition_work_item(
+            _get_engine(),
+            task_id,
+            WorkItemState(state),
+            actor=actor,
+        )
+        refreshed = get_work_item(_get_engine(), item.task_id)
+        return _success(item=_serialize_item(refreshed))
+    except ValueError as e:
+        return _error("NOT_FOUND", str(e))
+    except Exception as e:
+        error_type = type(e).__name__
+        return _error(error_type.upper(), str(e))
+
+
+@server.tool(
+    name="forgeops_fast_track",
+    description=(
+        "Fast-track a work item to a target state, automatically stepping through "
+        "all intermediate states. Useful for retroactively completing items that were "
+        "done before being tracked."
+    ),
+)
+def forgeops_fast_track(
+    task_id: int,
+    state: str,
+    actor: Optional[str] = None,
+) -> str:
+    """Fast-track a work item to a target state."""
+    try:
+        from core.database import fast_track_work_item, get_work_item
+        from models import WorkItemState
+
+        item = fast_track_work_item(
             _get_engine(),
             task_id,
             WorkItemState(state),

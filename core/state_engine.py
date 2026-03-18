@@ -52,6 +52,34 @@ def validate_transition(from_state: WorkItemState, to_state: WorkItemState) -> N
         raise InvalidTransitionError(from_state, to_state)
 
 
+def fast_track_transition(from_state: WorkItemState, to_state: WorkItemState) -> list[WorkItemState]:
+    """Return the sequence of intermediate states needed to reach to_state from from_state.
+
+    Returns the path (excluding from_state, including to_state) or raises
+    InvalidTransitionError if no path exists.
+    """
+    # BFS to find shortest path through the transition graph
+    from collections import deque
+
+    if from_state == to_state:
+        return []
+
+    queue: deque[list[WorkItemState]] = deque([[from_state]])
+    visited = {from_state}
+
+    while queue:
+        path = queue.popleft()
+        current = path[-1]
+        for next_state in TRANSITIONS.get(current, set()):
+            if next_state == to_state:
+                return path[1:] + [to_state]
+            if next_state not in visited:
+                visited.add(next_state)
+                queue.append(path + [next_state])
+
+    raise InvalidTransitionError(from_state, to_state)
+
+
 def check_repo_concurrency(engine, repo_id: int | None, task_id: int) -> None:
     """Raise RepoConcurrencyError if another item for the same repo is already executing."""
     if repo_id is None:

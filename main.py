@@ -36,6 +36,7 @@ from commands.state import update_status as _update_status
 from commands.tasks import add_task as _add_task
 from commands.tasks import list_tasks as _list_tasks
 from commands.update_repo import update_repo as _update_repo
+from commands.delete_issue import delete_issue as _delete_issue
 from commands.view_issue import view_issue as _view_issue
 
 app = typer.Typer(help="ForgeOps - Work Ledger")
@@ -90,6 +91,12 @@ def list_issues(
 def view_issue(issue_id: str = typer.Argument(help="Work item ID (e.g. WI-1 or 1)")):
     """View detailed information for a specific work item."""
     _view_issue(issue_id)
+
+
+@app.command()
+def delete_issue(task_id: int = typer.Argument(help="Work item ID to delete")):
+    """Delete a work item permanently."""
+    _delete_issue(task_id)
 
 
 # --- State Engine -------------------------------------------------------------
