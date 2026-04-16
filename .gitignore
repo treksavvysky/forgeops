@@ -9,5 +9,19 @@ wheels/
 # Virtual environments
 .venv
 
-# SQLite database
+# Testing
+.pytest_cache/
+.hypothesis/
+
+# Database and runtime state
 *.db
+.forgeops_snapshot.json
+
+# Legacy data files (no longer used by code, kept for reference)
+issues/
+issue_counter.txt
+repos.json
+task_lists/
+
+# misc
+docs/SMI-20260312-001.md

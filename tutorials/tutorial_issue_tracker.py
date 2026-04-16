@@ -6,13 +6,16 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAIN_SCRIPT_PATH = os.path.join(BASE_DIR, "main.py")
 
+
 def print_header(title):
     print("\n" + "=" * 70)
     print(f"ForgeOps - Issue Tracker Tutorial: {title}")
     print("=" * 70)
 
+
 def wait_for_user(prompt="\nPress Enter to continue..."):
     input(prompt)
+
 
 def run_command(command_args, interactive=False, user_input=None):
     full_command = [sys.executable, MAIN_SCRIPT_PATH] + command_args
@@ -23,13 +26,13 @@ def run_command(command_args, interactive=False, user_input=None):
         # For interactive, we let it run. If specific input is needed before interaction:
         if user_input:
             try:
-                process.communicate(input=user_input.encode(), timeout=15) # Example timeout
+                process.communicate(input=user_input.encode(), timeout=15)  # Example timeout
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.communicate()
                 print("   (Interactive command timed out or completed.)")
         else:
-            process.wait() # Wait for the interactive process to complete
+            process.wait()  # Wait for the interactive process to complete
         print("   (Interactive command session finished.)")
         return "Interactive command executed. Please observe the output above.", ""
     else:
@@ -108,9 +111,9 @@ def main_tutorial():
     print("The 'create-issue' command is interactive. The tutorial will launch it,")
     print("and you will need to follow the prompts IN YOUR TERMINAL to enter the details.")
     print("Suggested details for your first issue:")
-    print(f"  - Title: 'Implement login page'")
+    print("  - Title: 'Implement login page'")
     print(f"  - Repository name: '{repo_name1}' (or choose another)")
-    print(f"  - Description: 'Users need to be able to log in using email and password.'")
+    print("  - Description: 'Users need to be able to log in using email and password.'")
     print("\nWhen prompted 'Create this issue? (Y/n):', type 'Y' and press Enter.")
     wait_for_user("Press Enter to launch the interactive 'create-issue' command...")
     run_command(["create-issue"], interactive=True)
@@ -153,6 +156,7 @@ def main_tutorial():
     print("The repositories and issues you created during this tutorial still exist.")
     print("You can manage them using the CLI.")
     print("Happy coding!")
+
 
 if __name__ == "__main__":
     main_tutorial()

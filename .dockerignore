@@ -1,0 +1,17 @@
+__pycache__/
+*.py[oc]
+.venv/
+.git/
+.github/
+.hypothesis/
+.pytest_cache/
+tests/
+tutorials/
+docs/
+issues/
+task_lists/
+*.db
+.forgeops_snapshot.json
+.dockerignore
+Dockerfile
+docker-compose.yml
